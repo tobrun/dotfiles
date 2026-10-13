@@ -1,0 +1,48 @@
+# Declaration for the per-user `code` CLI (VSCodium, https://vscodium.com/).
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# The app is deliberately named `code` (not `codium`) so the module's
+# launcher is ~/.local/bin/code and the terminal behaves like stock VS Code
+# (`code .`, `code --wait`, `code --diff`, ...). Upstream product identity
+# inside the app remains VSCodium (data dir ~/.vscode-oss, Open VSX
+# marketplace, no MS telemetry/update endpoint).
+#
+# Provenance policy:
+#   Source: official VSCodium GitHub release, linux-x64 tarball. The release
+#   publishes a .sha256 sidecar asset — the pin below was verified against it
+#   at declaration time (2026-10-13), independent of the TLS download.
+#   Updating: latest version from
+#     https://api.github.com/repos/VSCodium/vscodium/releases/latest (tag_name)
+#   then download
+#     https://github.com/VSCodium/vscodium/releases/download/<ver>/VSCodium-linux-x64-<ver>.tar.gz
+#   (plus its .sha256 sidecar) into ~/.cache/workstation/apps/, verify, update
+#   version/archive/sha256 here, and rerun: bash modules/apps.sh code
+#
+#   Archive layout: payload sits at the tar root (`./`), so prefix = "."
+#   (module support: renames the extraction dir itself). Launcher is
+#   bin/codium (the deb's /usr/bin/codium symlinks the same script); the
+#   root-level ./codium Electron binary must not be launched directly.
+
+name = code
+title = VSCodium
+version = 1.135.06055
+binary = bin/codium
+prefix = .
+archive = VSCodium-linux-x64-1.135.06055.tar.gz
+sha256 = c09d8ac8dd7f52b09ee159ee24b440541dfd8f937a0f6f88cc428c78e48ee1f2
+source = https://github.com/VSCodium/vscodium/releases/download/1.135.06055/VSCodium-linux-x64-1.135.06055.tar.gz
+desktop = false
+
+# Sandbox requirements: same as chrome.txt — Ubuntu blocks the userns sandbox
+# for unconfined binaries via AppArmor, and the extracted chrome-sandbox
+# helper is user-owned (not setuid root), so an AppArmor profile granting
+# `userns` is required before the GUI launches:
+# https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+# The module generates the profile; install it once as root (printed hint).
+apparmor = true
+
+# Functional check: CLI --version must report the declared version. (Does not
+# exercise the Chromium sandbox; the GUI launch does, after the AppArmor
+# profile above is installed.)
+smoke = true
+smoke_cmd = "$APP" --version | grep -q -- "$VERSION"
