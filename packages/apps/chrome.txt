@@ -1,26 +1,36 @@
 # Declaration for the per-user `chrome` application.
 # Parsed by modules/apps.sh: `key = value`, one per line.
 #
-# Provenance:
-#   Obtained 2026-10-13 by the user from the Chromium snapshot bucket
-#   (redirects to a build in the chromium-browser-snapshots GCS bucket).
-#   That bucket rotates and deletes snapshot builds, so this exact archive may
-#   become un-fetchable from `source`. The sha256 below is the recovery anchor:
-#   keep the cached copy in ~/.cache/workstation/apps/ backed up with the
-#   personal-data policy, not with this repository.
-#   For future updates prefer Chrome for Testing: versioned URLs plus published
-#   .sha256 sidecars, e.g.
-#   https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json
-#   https://storage.googleapis.com/chrome-for-testing-public/<ver>/linux64/chrome-linux-x64.zip
+# Provenance policy:
+#   Source: Chrome for Testing (official Google release channel). Versioned,
+#   permanently retained URLs. The project publishes no checksum sidecar for
+#   these archives (the bucket disallows anonymous listing), so `sha256` below
+#   is a LOCAL RECOVERY ANCHOR recorded 2026-10-13 after a TLS download — it
+#   detects corruption or substitution since then, but is not independent
+#   publisher verification.
+#   Updating: select a version from
+#     https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json
+#   download
+#     https://storage.googleapis.com/chrome-for-testing-public/<ver>/linux64/chrome-linux64.zip
+#   into ~/.cache/workstation/apps/, update version/archive/sha256/source here,
+#   and rerun: bash modules/apps.sh chrome
+#
+#   History: 158.0.8104.0 (2026-10-13) was the initial install from the
+#   Chromium snapshot bucket (download-chromium.appspot.com — ephemeral,
+#   rotating). Its archive is retained in the cache as the recovery anchor.
+#   Rollback: restore these keys —
+#     version 158.0.8104.0, prefix chrome-linux,
+#     archive chrome-158.0.8104.0.zip,
+#     sha256 cafff3f34be8ee628ff7f819496cda2f79006572e2a8fba48186797b103ee6d6
 
 name = chrome
 title = Chromium
-version = 158.0.8104.0
+version = 155.0.8059.39
 binary = chrome
-prefix = chrome-linux
-archive = chrome-158.0.8104.0.zip
-sha256 = cafff3f34be8ee628ff7f819496cda2f79006572e2a8fba48186797b103ee6d6
-source = https://download-chromium.appspot.com/dl/Linux_x64
+prefix = chrome-linux64
+archive = chrome-for-testing-155.0.8059.39.zip
+sha256 = 55672d1f392fd3e7b7a08621b6e804e6bcb39d40cf155504abb74b3a021ea8ea
+source = https://storage.googleapis.com/chrome-for-testing-public/155.0.8059.39/linux64/chrome-linux64.zip
 desktop = true
 icon = product_logo_48.png
 
