@@ -1,0 +1,21 @@
+# Canonical developer toolchain declaration for this workstation.
+# Single source of truth (book ch. 6): the host receives rendered copies via
+# chezmoi (~/.config/mise/), images receive copies via Docker. Neither copy is
+# edited independently; `mise use -g` on the host creates drift — edit here and
+# regenerate instead.
+#
+# Bootstrap tools stay OUT of mise to avoid duplicate ownership (book ch. 7):
+#   chezmoi v2.73.1 and mise v2026.10.8 are pinned in README "Prerequisites".
+# Rust is intentionally absent until a project needs it (heaviest install);
+# add `rust = "stable"` when that changes.
+
+[settings]
+lockfile = true
+lockfile_platforms = ["linux-x64", "linux-arm64"]
+
+[tools]
+python = "3.13"
+node = "24"
+go = "1.26"
+uv = "latest"
+ripgrep = "latest"
