@@ -1,0 +1,12 @@
+{{- $profile := promptString "profile" -}}
+{{- if not (or (eq $profile "desktop") (eq $profile "server") (eq $profile "container")) -}}
+{{- fail "profile must be desktop, server, or container" -}}
+{{- end -}}
+{{- $gitName := promptString "gitName" -}}
+{{- $gitEmail := promptString "gitEmail" -}}
+sourceDir = {{ .chezmoi.workingTree | quote }}
+
+[data]
+profile = {{ $profile | quote }}
+gitName = {{ $gitName | quote }}
+gitEmail = {{ $gitEmail | quote }}

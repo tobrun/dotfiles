@@ -1,0 +1,5 @@
+{{ if eq .profile "container" }}
+.config/mise/config.toml
+.config/mise/mise.lock
+.gitconfig
+{{ end }}
