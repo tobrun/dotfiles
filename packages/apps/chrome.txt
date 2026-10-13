@@ -1,0 +1,33 @@
+# Declaration for the per-user `chrome` application.
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance:
+#   Obtained 2026-10-13 by the user from the Chromium snapshot bucket
+#   (redirects to a build in the chromium-browser-snapshots GCS bucket).
+#   That bucket rotates and deletes snapshot builds, so this exact archive may
+#   become un-fetchable from `source`. The sha256 below is the recovery anchor:
+#   keep the cached copy in ~/.cache/workstation/apps/ backed up with the
+#   personal-data policy, not with this repository.
+#   For future updates prefer Chrome for Testing: versioned URLs plus published
+#   .sha256 sidecars, e.g.
+#   https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json
+#   https://storage.googleapis.com/chrome-for-testing-public/<ver>/linux64/chrome-linux-x64.zip
+
+name = chrome
+title = Chromium
+version = 158.0.8104.0
+binary = chrome
+prefix = chrome-linux
+archive = chrome-158.0.8104.0.zip
+sha256 = cafff3f34be8ee628ff7f819496cda2f79006572e2a8fba48186797b103ee6d6
+source = https://download-chromium.appspot.com/dl/Linux_x64
+desktop = true
+icon = product_logo_48.png
+
+# Sandbox requirements (Ubuntu 23.10+ blocks the userns sandbox for unconfined
+# binaries via AppArmor; the legacy SUID sandbox was removed from Chromium
+# builds, so an AppArmor profile granting `userns` is the supported mechanism):
+# https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+apparmor = true
+# Final functional check: sandboxed headless render must succeed.
+smoke = true

@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# bootstrap — apply the declared layers for this host, reporting failures by
+# phase. Current phases: apt packages, then declared user apps. (chezmoi and
+# mise phases join this script when their declarations exist.)
+set -Eeuo pipefail
+
+repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+failed_phases=()
+
+run_phase() {
+  local phase=$1
+  shift
+  printf '==> phase: %s\n' "$phase"
+  if ! "$@"; then
+    printf 'bootstrap: phase failed: %s\n' "$phase" >&2
+    failed_phases+=("$phase")
+  fi
+}
+
+((EUID != 0)) || { printf 'run bootstrap as the intended ordinary user\n' >&2; exit 1; }
+
+# Phase 1: Ubuntu packages (root-owned work stays in the module).
+if [[ -t 0 ]]; then sudo -v; else printf 'bootstrap: noninteractive; sudo may prompt or fail\n'; fi
+run_phase apt sudo env WORKSTATION_APT_SNAPSHOT= \
+  bash "$repo_root/modules/apt.sh" base
+
+# Phase 2: declared per-user applications.
+apps=(chrome)
+run_phase apps bash "$repo_root/modules/apps.sh" "${apps[@]}"
+
+if ((${#failed_phases[@]} > 0)); then
+  printf 'bootstrap: failed phases: %s\n' "${failed_phases[*]}" >&2
+  exit 1
+fi
+printf 'bootstrap: all phases applied\n'

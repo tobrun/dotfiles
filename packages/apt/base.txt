@@ -1,0 +1,7 @@
+# Transport and repository operations
+ca-certificates
+curl
+git
+
+# Archive handling used by the apps module
+unzip
