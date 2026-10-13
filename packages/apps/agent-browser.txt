@@ -1,0 +1,39 @@
+# Declaration for the per-user `agent-browser` CLI (browser automation for
+# AI agents, https://github.com/vercel-labs/agent-browser).
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   agent-browser is a native Rust binary. The npm package is self-contained:
+#   it ships per-platform executables under bin/ (no postinstall download is
+#   required — the postinstall only patches npm shims). We extract the
+#   linux-x64 executable directly, same style as opencode. The tarball URL is
+#   versioned and permanent; the npm registry publishes dist.integrity
+#   (sha512) per package — verified against this download at declaration time
+#   (2026-10-13). `sha256` is our standard pin, computed from the same
+#   download.
+#   Updating: latest version from
+#     https://registry.npmjs.org/agent-browser (JSON, dist-tags.latest)
+#   then replace <ver> in the source URL, download the tgz into
+#   ~/.cache/workstation/apps/, cross-check the registry's dist.integrity,
+#   update version/archive/sha256 here, and rerun:
+#     bash modules/apps.sh agent-browser
+#
+#   Binary: bin/agent-browser-linux-x64 (the upstream bin/agent-browser.js
+#   node wrapper is skipped; the native binary needs no Node at runtime).
+#   First use may need `agent-browser install` to download Chrome for
+#   Testing, but an existing Chrome/Brave install is auto-detected — this
+#   machine has one (packages/apps/chrome.txt).
+
+name = agent-browser
+title = Agent Browser
+version = 0.39.0
+binary = bin/agent-browser-linux-x64
+prefix = package
+archive = agent-browser-0.39.0.tgz
+sha256 = f2fa3b29b14ec35675af41afe4284faccd135434f18986bfc3226ce934ed87ac
+source = https://registry.npmjs.org/agent-browser/-/agent-browser-0.39.0.tgz
+desktop = false
+
+# Functional check: the launcher must report the declared version.
+smoke = true
+smoke_cmd = "$APP" --version | grep -q -- "$VERSION"
