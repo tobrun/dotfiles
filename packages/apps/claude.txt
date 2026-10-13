@@ -1,0 +1,39 @@
+# Declaration for the per-user `claude` CLI (Claude Code, Anthropic).
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   Source: the official npm platform package @anthropic-ai/claude-code-linux-x64
+#   (same native binary the claude.ai/install.sh installer fetches, but as a
+#   versioned, permanently retained registry tarball). The pin below was
+#   verified at declaration time (2026-10-13) against the registry's published
+#   sha1 shasum AND sha512 integrity — independent of the TLS download.
+#   Version policy: track the `stable` dist-tag (what the official installer
+#   ships), NOT `latest`.
+#   Updating: read dist-tags.stable from
+#     https://registry.npmjs.org/@anthropic-ai%2Fclaude-code-linux-x64
+#   download
+#     https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-<ver>.tgz
+#   into ~/.cache/workstation/apps/, verify sha1 + sha512 against that same
+#   registry response (dist.shasum / dist.integrity), update
+#   version/archive/sha256 here, and rerun: bash modules/apps.sh claude
+#
+#   Archive layout: npm convention `package/` prefix; the payload is the
+#   single native ELF binary `claude` (no launcher script, no node runtime
+#   needed).
+#
+#   History: initial install 2.1.287 (2026-10-13).
+
+name = claude
+title = Claude Code
+version = 2.1.287
+binary = claude
+prefix = package
+archive = claude-code-linux-x64-2.1.287.tgz
+sha256 = 348090e889baacf20e6665fd236e2bc617767eb733407151128efd0281a06111
+source = https://registry.npmjs.org/@anthropic-ai/claude-code-linux-x64/-/claude-code-linux-x64-2.1.287.tgz
+desktop = false
+
+# Native binary, no sandbox/Chromium involvement: no apparmor needed.
+# Functional check: --version prints e.g. "2.1.287 (Claude Code)".
+smoke = true
+smoke_cmd = "$APP" --version | grep -q -- "$VERSION"
