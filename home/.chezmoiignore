@@ -1,5 +1,7 @@
 {{ if eq .profile "container" }}
 .config/mise/config.toml
 .config/mise/mise.lock
+.config/systemd/user/workstation-drift.service
+.config/systemd/user/workstation-drift.timer
 .gitconfig
 {{ end }}

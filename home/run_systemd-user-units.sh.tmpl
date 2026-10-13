@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# chezmoi run script: activate the drift timer after its units are applied.
+# daemon-reload + enable --now are idempotent, so this runs on every apply.
+{{ if eq .profile "container" }}
+exit 0
+{{ end }}
+set -u
+if ! command -v systemctl >/dev/null 2>&1 ||
+  ! systemctl --user is-system-running >/dev/null 2>&1; then
+  echo 'SKIP: no systemd user manager; drift timer not activated'
+  exit 0
+fi
+systemctl --user daemon-reload
+systemctl --user enable --now workstation-drift.timer

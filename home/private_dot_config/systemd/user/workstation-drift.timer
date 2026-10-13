@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily workstation drift check
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

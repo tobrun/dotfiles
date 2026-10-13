@@ -1,0 +1,10 @@
+[Unit]
+Description=Workstation drift report (declarations vs reality)
+# Read-only: scripts/drift.sh never changes state. Reports are written to
+# ~/.local/state/workstation/drift/ by the script itself.
+
+[Service]
+Type=oneshot
+WorkingDirectory={{ .repoDir }}
+ExecStart={{ joinPath .repoDir "scripts/drift.sh" }}
+Nice=10

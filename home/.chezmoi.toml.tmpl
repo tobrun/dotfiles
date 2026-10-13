@@ -4,9 +4,14 @@
 {{- end -}}
 {{- $gitName := promptString "gitName" -}}
 {{- $gitEmail := promptString "gitEmail" -}}
-sourceDir = {{ .chezmoi.workingTree | quote }}
+{{- $repoDir := promptString "repoDir" -}}
+{{- if not $repoDir -}}
+{{- fail "repoDir must be set (bootstrap passes it; manually: --promptString repoDir=<absolute path of the workstation repo>)" -}}
+{{- end -}}
+sourceDir = {{ $repoDir | quote }}
 
 [data]
 profile = {{ $profile | quote }}
 gitName = {{ $gitName | quote }}
 gitEmail = {{ $gitEmail | quote }}
+repoDir = {{ $repoDir | quote }}
