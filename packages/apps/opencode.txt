@@ -1,0 +1,34 @@
+# Declaration for the per-user `opencode` CLI.
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   opencode v2 ships per-platform binaries as npm packages under the
+#   @opencode scope. The tarball URL below is versioned and permanent, and the
+#   npm registry publishes dist.integrity (sha512) per package — verified
+#   against this download at declaration time (2026-10-13). `sha256` is our
+#   standard pin, computed from the same download.
+#   Do NOT confuse with the @opencode-ai scope or the mise registry entry
+#   `opencode`, which are the older 1.x product line.
+#   Updating: latest version from
+#     https://opencode.ai/update/api/latest/cli/npm   (JSON, "version" key)
+#   then replace <ver> in the source URL, download the tgz into
+#   ~/.cache/workstation/apps/, cross-check the registry's dist.integrity,
+#   update version/archive/sha256 here, and rerun: bash modules/apps.sh opencode
+#
+#   This replaces the curl-pipe installer (opencode.ai/v2/install) recorded in
+#   ~/Documents/initial-install.txt; ~/.opencode/ (installer-owned copy, old
+#   PATH entry) can be deleted once nothing runs from it anymore.
+
+name = opencode
+title = OpenCode
+version = 2.0.28
+binary = bin/opencode
+prefix = package
+archive = cli-linux-x64-2.0.28.tgz
+sha256 = 76f8505baaf56965ed28f305b74c526b54eccd18fe78c81621a4090cc026c9f9
+source = https://registry.npmjs.org/@opencode%2fcli-linux-x64/-/cli-linux-x64-2.0.28.tgz
+desktop = false
+
+# Functional check: the launcher must report the declared version.
+smoke = true
+smoke_cmd = "$APP" --version | grep -q -- "$VERSION"
