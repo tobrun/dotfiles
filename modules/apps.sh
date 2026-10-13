@@ -68,6 +68,26 @@ install_app() {
     fail "app '$app': drift — version ${f[version]} not installed"
   else
     local archive="$cache_dir/${f[archive]}"
+    # Opt-in artifact fetch (image builds, fresh machines): downloads the
+    # declared source before the mandatory sha256 verification below. Off by
+    # default — the manual "place the artifact, rerun" policy stays the norm.
+    # The declaration's sha256 is the trust anchor; the URL is only transport.
+    if [[ ! -r "$archive" && "${WORKSTATION_APP_FETCH:-0}" == 1 ]]; then
+      [[ "${f[source]}" =~ ^https://[^[:space:]]+$ ]] ||
+        fail "app '$app': fetch requested but source is not a plain https URL"
+      note "$app ${f[version]}: fetching ${f[archive]} from declared source"
+      mkdir -p -- "$cache_dir"
+      local fetched="$archive.download.$$"
+      if ! curl -fsSL --retry 3 -o "$fetched" -- "${f[source]}"; then
+        rm -f -- "$fetched"
+        fail "app '$app': download failed: ${f[source]}"
+      fi
+      if ! printf '%s  %s\n' "${f[sha256]}" "$fetched" | sha256sum --status -c -; then
+        rm -f -- "$fetched"
+        fail "app '$app': fetched archive FAILS the declared sha256 — refusing to install"
+      fi
+      mv -- "$fetched" "$archive"
+    fi
     [[ -r "$archive" ]] || fail \
 "app '$app': archive not found: $archive
   Place the artifact obtained from ${f[source]} there, then rerun.
