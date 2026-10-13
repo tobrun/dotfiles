@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
-# bootstrap — apply the declared layers for this host, reporting failures by
-# phase. Current phases: apt packages, then declared user apps. (chezmoi and
-# mise phases join this script when their declarations exist.)
+# bootstrap — converge this machine onto the declarations in this repo.
+# One entry point, ordered phases, failures reported by phase. Root work is
+# delegated to the owning module via sudo; nothing here silently installs a
+# bootstrap tool (see Prerequisites in README).
+#
+# Environment overrides:
+#   WORKSTATION_PROFILE     desktop (default) | server | container
+#   WORKSTATION_GIT_NAME    git display name   (default: existing git config)
+#   WORKSTATION_GIT_EMAIL   git email          (default: existing git config)
+#   WORKSTATION_APPLY_FORCE set to 1 to pass --force to chezmoi apply
 set -Eeuo pipefail
+
+# Bootstrap tools live under ~/.local/bin (see README Prerequisites); do not
+# depend on the caller's interactive PATH.
+export PATH="$HOME/.local/bin:$PATH"
 
 repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 failed_phases=()
@@ -19,14 +30,57 @@ run_phase() {
 
 ((EUID != 0)) || { printf 'run bootstrap as the intended ordinary user\n' >&2; exit 1; }
 
+# Bootstrap tools run the convergence, so they cannot be converged by it.
+# Verify presence; print the exact pinned install command when missing.
+command -v chezmoi >/dev/null 2>&1 || {
+  printf 'bootstrap: chezmoi missing. Install first (pinned, see README):\n  sh -c "$(curl -fsSL get.chezmoi.io)" -b ~/.local/bin -t v2.73.1\n' >&2
+  exit 1
+}
+command -v mise >/dev/null 2>&1 || {
+  printf 'bootstrap: mise missing. Install first (pinned, see README):\n  curl -fsSL https://mise.run | MISE_VERSION=v2026.10.8 sh\n' >&2
+  exit 1
+}
+
+profile=${WORKSTATION_PROFILE:-desktop}
+git_name=${WORKSTATION_GIT_NAME:-$(git config --global user.name 2>/dev/null || true)}
+git_email=${WORKSTATION_GIT_EMAIL:-$(git config --global user.email 2>/dev/null || true)}
+[[ -n "$git_name" && -n "$git_email" ]] || {
+  printf 'bootstrap: git identity unknown. Set WORKSTATION_GIT_NAME and WORKSTATION_GIT_EMAIL.\n' >&2
+  exit 1
+}
+
 # Phase 1: Ubuntu packages (root-owned work stays in the module).
 if [[ -t 0 ]]; then sudo -v; else printf 'bootstrap: noninteractive; sudo may prompt or fail\n'; fi
 run_phase apt sudo env WORKSTATION_APT_SNAPSHOT= \
   bash "$repo_root/modules/apt.sh" base
 
-# Phase 2: declared per-user applications.
-apps=(chrome)
-run_phase apps bash "$repo_root/modules/apps.sh" "${apps[@]}"
+# Phase 2: declared per-user applications (artifact cache must be populated).
+apps=()
+for decl in "$repo_root"/packages/apps/*.txt; do
+  apps+=("$(basename -- "$decl" .txt)")
+done
+((${#apps[@]} > 0)) && run_phase apps bash "$repo_root/modules/apps.sh" "${apps[@]}"
+
+# Phase 3: dotfiles. chezmoi init records machine data (profile, identity);
+# apply projects home files including the mise config copies.
+apply_dotfiles() {
+  chezmoi init --source "$repo_root" \
+    --promptString "profile=$profile" \
+    --promptString "gitName=$git_name" \
+    --promptString "gitEmail=$git_email"
+  local force=()
+  [[ "${WORKSTATION_APPLY_FORCE:-}" == 1 ]] && force+=(--force)
+  chezmoi apply "${force[@]}"
+}
+run_phase dotfiles apply_dotfiles
+
+# Phase 4: developer toolchains, from the chezmoi-projected global config.
+# --locked makes mise refuse to resolve anything the lockfile has not pinned.
+apply_toolchains() {
+  mise trust --quiet "$HOME/.config/mise/config.toml"
+  (cd "$HOME" && MISE_LOCKED=1 mise install --locked)
+}
+run_phase toolchains apply_toolchains
 
 if ((${#failed_phases[@]} > 0)); then
   printf 'bootstrap: failed phases: %s\n' "${failed_phases[*]}" >&2
