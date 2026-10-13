@@ -39,7 +39,7 @@ install_app() {
 
   while IFS= read -r line || [[ -n "$line" ]]; do
     [[ "$line" =~ ^[[:space:]]*(#|$) ]] && continue
-    [[ "$line" =~ ^[[:space:]]*([a-z0-9]+)[[:space:]]*=[[:space:]]*(.+)[[:space:]]*$ ]] ||
+    [[ "$line" =~ ^[[:space:]]*([a-z0-9_]+)[[:space:]]*=[[:space:]]*(.+)[[:space:]]*$ ]] ||
       fail "invalid entry in $app declaration: $line"
     key=${BASH_REMATCH[1]}
     value=${BASH_REMATCH[2]}
@@ -87,7 +87,11 @@ install_app() {
     rm -rf -- "$dest"
     local tmp
     tmp=$(mktemp -d -- "$app_dir/.tmp.XXXXXX")
-    unzip -q -- "$archive" -d "$tmp"
+    case "${f[archive]}" in
+      *.zip) unzip -q -- "$archive" -d "$tmp" ;;
+      *.tar.gz | *.tgz) tar -xzf "$archive" -C "$tmp" ;;
+      *) fail "app '$app': unsupported archive type: ${f[archive]}" ;;
+    esac
     [[ -d "$tmp/${f[prefix]}" ]] || fail "app '$app': archive has no top-level '${f[prefix]}/'"
     mv -- "$tmp/${f[prefix]}" "$dest"
     rmdir -- "$tmp" 2>/dev/null || rm -rf -- "$tmp"
@@ -187,14 +191,15 @@ EOF
     fi
   fi
 
-  # Functional evidence: sandboxed headless render.
+  # Functional evidence: run the app's own declared smoke command through its
+  # real launcher. $APP is the launcher path, $VERSION the declared version.
   if [[ "${f[smoke]:-false}" == "true" ]]; then
-    local tmp_profile out rc=0
-    tmp_profile=$(mktemp -d)
-    out=$(timeout 60 "$bin_dir/$app" --headless=new --disable-gpu \
-      --user-data-dir="$tmp_profile" --dump-dom about:blank 2>&1) || rc=$?
-    rm -rf -- "$tmp_profile"
-    if ((rc != 0)) || [[ "$out" != *"<html>"* ]]; then
+    [[ -n "${f[smoke_cmd]:-}" ]] ||
+      fail "app '$app': smoke = true requires a smoke_cmd key"
+    local out rc=0
+    out=$(APP="$bin_dir/$app" VERSION="${f[version]}" timeout 60 \
+      bash -c "${f[smoke_cmd]}" 2>&1) || rc=$?
+    if ((rc != 0)); then
       printf 'apps: %s: smoke test failed (exit %s):\n' "$app" "$rc" >&2
       printf '%s\n' "$out" | head -5 >&2
       if [[ "${f[apparmor]:-false}" == "true" && ! -e "/etc/apparmor.d/$profile_name" ]]; then
@@ -204,7 +209,7 @@ EOF
       fi
       return 1
     fi
-    note "$app: smoke test passed (sandboxed headless render)"
+    note "$app: smoke test passed"
   fi
 
   note "$app ${f[version]}: converged ($bin_dir/$app)"

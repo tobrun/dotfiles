@@ -41,3 +41,4 @@ icon = product_logo_48.png
 apparmor = true
 # Final functional check: sandboxed headless render must succeed.
 smoke = true
+smoke_cmd = tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT; out=$("$APP" --headless=new --disable-gpu --user-data-dir="$tmp" --dump-dom about:blank 2>&1) && grep -q "<html>" <<<"$out"
