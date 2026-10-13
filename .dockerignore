@@ -1,0 +1,17 @@
+# Build context allowlist (deny-all, then admit inputs of docker/Dockerfile).
+# Extend deliberately: if the Dockerfile COPYs it, allowlist it.
+**
+!modules/
+!modules/apt.sh
+!modules/apps.sh
+!packages/
+!packages/apt/
+!packages/apt/base.txt
+!packages/apps/
+!packages/apps/claude.txt
+!packages/apps/opencode.txt
+!toolchains/
+!toolchains/mise.toml
+!toolchains/mise.lock
+!docker/
+!docker/Dockerfile

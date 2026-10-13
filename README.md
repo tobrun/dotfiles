@@ -13,7 +13,7 @@ environment; small modules apply it; observations live outside this repo.
 | Personal files (shell, git config, systemd units, mise config copies) | chezmoi | `home/` | active |
 | GNOME desktop settings | desktop module | `packages/desktop/*.txt` | active |
 | Language runtimes / dev CLIs | mise | `toolchains/mise.toml` + lock | active |
-| Container packaging | Dockerfile | `docker/` | planned |
+| Container packaging | Dockerfile (same modules + declarations) | `docker/` | active |
 
 Do not install the same tool through two owners. The package owner and the
 effective executable must agree. In particular, **bootstrap tools (chezmoi, mise)
@@ -116,6 +116,25 @@ The desktop layer converges **exact values** (`gsettings get` GVariant literals)
 the one place to change desktop preferences: edits made through the Settings app
 or gsettings by hand are drift and will be reverted by the next `./bootstrap`.
 Run `./scripts/drift.sh` first to see what would be reverted.
+
+## Docker sandboxes
+
+`docker/` assembles sandbox images from the **same** declarations and modules
+the host converges (`modules/apt.sh`, `modules/apps.sh`, `toolchains/`,
+`packages/apps/claude.txt`, `packages/apps/opencode.txt`). Base images are
+pinned by digest in `docker/inputs.txt`; image builds fetch app artifacts with
+`WORKSTATION_APP_FETCH=1` (opt-in, always sha256-verified against the
+declaration). Deliberate host/image differences are documented in
+`docker/README.md`.
+
+```bash
+bash docker/build.sh agent    # build workstation-agent:local
+bash docker/acceptance.sh     # parity checks against the declarations
+bash docker/run.sh            # sandbox with $PWD mounted at /workspaces
+```
+
+The host engine itself is the apt group `packages/apt/docker.txt` (installed by
+`./bootstrap`; afterwards `sudo usermod -aG docker $USER` and re-login).
 
 ## Current manual notes
 

@@ -34,6 +34,7 @@ operating contract.
 | `packages/apt/base.txt` | System package pins (`name=version`) |
 | `packages/apps/*.txt` | App declarations (version, sha256, launcher, smoke test) |
 | `packages/desktop/gnome.txt` | GNOME settings baseline |
+| `docker/` | sandbox image assembly (`inputs.txt` pins, `build.sh`, `acceptance.sh`, `run.sh`) |
 | `scripts/drift.sh` | Cross-layer read-only drift report |
 
 ## Convergence contract (every module obeys this)
@@ -81,6 +82,15 @@ when reproducibility matters), then `modules/apt.sh` via sudo.
 
 **Developer tool** → `mise use -g <tool>@<version>` (updates both
 `toolchains/mise.toml` and `mise.lock`); commit both files.
+
+**Docker sandbox** → `bash docker/build.sh [base|tooling|agent]`, then
+`bash docker/acceptance.sh` (the layer's acceptance test; run it whenever
+shared modules, declarations, or `docker/inputs.txt` change). The image must
+install through the shared modules only — never add install logic to the
+Dockerfile itself. `docker/README.md` documents every intentional
+host/image difference; update it when they change. App artifacts may be
+fetched during builds via `WORKSTATION_APP_FETCH=1` (sha256-gated; host
+default stays manual placement).
 
 ## Environment notes (agent shells)
 

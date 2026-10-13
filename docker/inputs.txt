@@ -1,0 +1,17 @@
+# Pinned build inputs for docker/Dockerfile — no floating defaults (book ch 9).
+# Parsed by docker/build.sh: `key = value`, one per line.
+#
+# Digests were resolved 2026-10-13 against the publishers' registries:
+#   ubuntu    docker.io/library/ubuntu       tag 26.04    (matches host release)
+#   mise      ghcr.io/jdx/mise               tag 2026.10.8 (matches README
+#                                                           Prerequisites pin)
+# Updating (review each bump deliberately — these are the image's foundation):
+#   # index digest of the desired tag:
+#   curl -s -H "Authorization: Bearer $(curl -s "https://auth.docker.io/token?service=registry.docker.io&scope=repository:library/ubuntu:pull" | jq -r .token)" \
+#     -H "Accept: application/vnd.oci.image.index.v1+json" -o /dev/null -D - \
+#     "https://registry-1.docker.io/v2/library/ubuntu/manifests/26.04" | grep -i docker-content-digest
+#   # same shape for ghcr.io (token: https://ghcr.io/token?scope=repository:jdx/mise:pull)
+# Then rerun: bash docker/build.sh tooling && bash docker/acceptance.sh
+
+ubuntu_image = ubuntu:26.04@sha256:f144425ff09be612d6d9ad965196e9cdc23dae1f42110a8a11a3e9a8198759f7
+mise_image = ghcr.io/jdx/mise:2026.10.8@sha256:b720f506c21a6bf5f733a3b1cd04361617ac461a597e44f513aa3976dcd71e57
