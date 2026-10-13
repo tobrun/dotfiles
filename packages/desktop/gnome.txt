@@ -1,0 +1,20 @@
+# GNOME desktop settings baseline (applied by modules/desktop.sh via gsettings).
+# Values are exactly what `gsettings get` prints (GVariant literals).
+#
+# Seeded 2026-10-13 from the machine's observed state — a snapshot of current
+# preferences, not a statement of intent. Edit here to change the desktop;
+# modules/desktop.sh converges exact values, so external edits (Settings app,
+# tweaks) show up as drift and are reverted on the next ./bootstrap. Use
+# scripts/drift.sh to see them first.
+org.gnome.desktop.wm.preferences button-layout = ':minimize,maximize,close'
+org.gnome.desktop.interface color-scheme = 'prefer-dark'
+org.gnome.desktop.interface font-name = 'Ubuntu Sans 11'
+org.gnome.desktop.interface monospace-font-name = 'Ubuntu Sans Mono 11'
+org.gnome.desktop.interface show-battery-percentage = false
+org.gnome.desktop.interface clock-show-weekday = false
+org.gnome.desktop.interface enable-animations = true
+org.gnome.desktop.peripherals.touchpad natural-scroll = true
+org.gnome.desktop.peripherals.touchpad tap-to-click = true
+org.gnome.shell favorite-apps = ['ubuntu-desktop-bootstrap_ubuntu-desktop-bootstrap.desktop', 'firefox_firefox.desktop', 'thunderbird_thunderbird.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Rhythmbox3.desktop', 'libreoffice-writer.desktop', 'snap-store_snap-store.desktop', 'org.gnome.Yelp.desktop']
+org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type = 'nothing'
+org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type = 'suspend'
