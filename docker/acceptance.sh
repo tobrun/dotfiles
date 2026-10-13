@@ -20,11 +20,12 @@ docker image inspect "$image" >/dev/null 2>&1 ||
 decl_version() { grep -m1 '^version = ' "$repo_root/packages/apps/$1.txt" | sed 's/.*= //'; }
 
 # 1) apt layer: every declared base-group package is installed in the image.
-pkgs=$(sed -n 's/^[a-z0-9][a-z0-9+.-]*$/&/p' "$repo_root/packages/apt/base.txt")
-[ -n "$pkgs" ] || fail "no packages parsed from base.txt"
-docker run --rm --entrypoint bash "$image" -c \
-  "dpkg-query -W -f='\${Status}\n' $pkgs | grep -vc 'install ok installed'" |
-  grep -qx 0 || fail "apt layer: declared packages missing in image"
+pkgs=$(sed -n 's/^[a-z0-9][a-z0-9+.-]*$/&/p' "$repo_root/packages/apt/base.txt" | tr '\n' ' ')
+[[ -n "${pkgs// /}" ]] || fail "no packages parsed from base.txt"
+want=$(wc -w <<<"$pkgs")
+got=$(docker run --rm --entrypoint bash "$image" -c \
+  "dpkg-query -W -f='\${Status}\n' $pkgs 2>/dev/null | grep -cx 'install ok installed'" || true)
+[[ "$got" == "$want" ]] || fail "apt layer: only $got/$want declared packages installed"
 ok "apt layer: base.txt packages all installed"
 
 # 2) toolchain layer: effective tool versions satisfy toolchains/mise.toml pins.
@@ -52,8 +53,8 @@ done
 
 # 4) hash-verified installs: provenance markers carried through.
 docker run --rm --entrypoint bash "$image" -c \
-  'grep -l "^sha256=" /home/dev/.local/apps/*/*/.provenance | wc -l' |
-  grep -qx 2 || fail "provenance markers missing"
+  'for a in claude opencode; do grep -q "^sha256=" /home/dev/.local/apps/$a/*/.provenance || exit 1; done' ||
+  fail "provenance markers missing"
 ok "provenance markers present for both apps"
 
 # 5) host-only capabilities are absent by design (documented differences).
