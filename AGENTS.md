@@ -93,10 +93,17 @@ when reproducibility matters), then `modules/apt.sh` via sudo.
 
 ## Conventions
 
-- Commit one logical unit; message style `<area>: <lowercase summary>`,
+- Commit one logical unit, and commit **as you go**: work must never sit
+  uncommitted at the end of an exchange — an uncommitted change is invisible
+  to the repo's explanation of the machine. Message style
+  `<area>: <lowercase summary>`,
   e.g. `apps: declare opencode 2.0.28 from the @opencode npm platform
   artifact`. Land module-support changes as their own commit before the
   declaration that needs them. Never commit binaries or cached archives.
+- Push after committing: `git push` to `origin` once the unit passes its
+  acceptance test. Local-only history defeats the repo's purpose (single
+  point of failure). If the push fails (no remote, auth), say so explicitly
+  rather than letting commits pile up silently.
 - Version bumps: follow the declaration header's update recipe, re-verify the
   checksum, rerun the module, run `scripts/drift.sh`.
 - Shell style: bash with `set -Eeuo pipefail`, `note()`/`fail()` helpers,
