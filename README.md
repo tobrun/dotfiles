@@ -65,6 +65,10 @@ bash modules/desktop.sh gnome                 # converge GNOME settings
 
 `modules/apt.sh` is presence-only by design: it installs declared packages, it does
 not remove, downgrade, or upgrade (the host security policy owns upgrades).
+Groups may bind third-party apt repositories with `repo = <name>` lines; the
+repo itself is declared by `packages/apt/repos/<name>.sources` +
+`<name>.key.asc` (committed key, fixed keyring path) and the module converges
+both before touching packages — `tailscale` is the reference group.
 
 **Mise ownership rule:** the host's `~/.config/mise/config.toml` and `mise.lock`
 are chezmoi-projected copies of `toolchains/`. Never run bare `mise use`/`mise

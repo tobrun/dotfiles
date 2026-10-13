@@ -26,7 +26,7 @@ operating contract.
 | Path | Purpose |
 | --- | --- |
 | `bootstrap` | Ordered phases, root work delegated via sudo, machine data passed explicitly |
-| `modules/apt.sh` | System packages from `packages/apt/base.txt` (`--check` = read-only) |
+| `modules/apt.sh` | System packages from `packages/apt/<group>.txt`; `repo = <name>` lines bind third-party repos declared in `packages/apt/repos/` (`--check` = read-only) |
 | `modules/apps.sh` | Per-user pinned apps from `packages/apps/<app>.txt` (`WORKSTATION_APPS_CHECK=1` = read-only) |
 | `modules/desktop.sh` | gsettings convergence from `packages/desktop/<profile>.txt` (`WORKSTATION_DESKTOP_CHECK=1`) |
 | `home/` | chezmoi source tree, projected onto `$HOME` (naming: `dot_x` → `.x`) |
@@ -49,6 +49,15 @@ operating contract.
 
 **System package** → append to `packages/apt/base.txt` (pin `name=version`
 when reproducibility matters), then `modules/apt.sh` via sudo.
+
+**System package needing a vendor apt repo** (e.g. tailscale) → commit the
+repo as `packages/apt/repos/<name>.key.asc` (ASCII-armored key; header must
+record source URL + fingerprint, and it must verify the repo's `InRelease`)
+and `packages/apt/repos/<name>.sources` (deb822, `Signed-By:` pointing at the
+fixed keyring path `/usr/share/keyrings/<name>-archive-keyring.gpg`). A group
+manifest then binds it with `repo = <name>` above the package lines — see
+`packages/apt/tailscale.txt`. The module converges keyring + sources before
+packages and covers them in `--check` mode.
 
 **Per-user CLI/app** → new `packages/apps/<app>.txt`, never ad-hoc
 `npm i -g` or manual installs:
