@@ -92,9 +92,15 @@ install_app() {
       *.tar.gz | *.tgz) tar -xzf "$archive" -C "$tmp" ;;
       *) fail "app '$app': unsupported archive type: ${f[archive]}" ;;
     esac
-    [[ -d "$tmp/${f[prefix]}" ]] || fail "app '$app': archive has no top-level '${f[prefix]}/'"
-    mv -- "$tmp/${f[prefix]}" "$dest"
-    rmdir -- "$tmp" 2>/dev/null || rm -rf -- "$tmp"
+    if [[ "${f[prefix]}" == "." ]]; then
+      # Payload at the archive root (e.g. VSCodium tarballs): tmp itself is
+      # the install tree, and it lives in $app_dir, so rename it into place.
+      mv -- "$tmp" "$dest"
+    else
+      [[ -d "$tmp/${f[prefix]}" ]] || fail "app '$app': archive has no top-level '${f[prefix]}/'"
+      mv -- "$tmp/${f[prefix]}" "$dest"
+      rmdir -- "$tmp" 2>/dev/null || rm -rf -- "$tmp"
+    fi
     [[ -x "$dest/${f[binary]}" ]] || chmod +x -- "$dest/${f[binary]}"
     printf '%s\n' "$provenance" > "$dest/.provenance"
   fi
@@ -144,9 +150,11 @@ EOF
     fi
   fi
 
-  # runtime library check (declared capability must actually load)
+  # runtime library check (declared capability must actually load). Guarded:
+  # ldd exits 1 on script launchers ("not a dynamic executable"), and with
+  # pipefail that would abort the module; only "not found" lines matter.
   local missing
-  missing=$(ldd "$dest/${f[binary]}" 2>/dev/null | awk '/not found/{print $1}' | sort -u)
+  missing=$(ldd "$dest/${f[binary]}" 2>/dev/null | awk '/not found/{print $1}' | sort -u) || true
   [[ -z "$missing" ]] ||
     fail "app '$app': shared libraries missing at runtime: $missing"
 
