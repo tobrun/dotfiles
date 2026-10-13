@@ -1,0 +1,12 @@
+# Group: host mesh VPN (Tailscale client + system daemon).
+# Host-only group: sandbox images never join the tailnet.
+# Tailscale is not in the Ubuntu archive, so this group binds the official
+# repository declaration (repo = tailscale -> packages/apt/repos/tailscale.*).
+# The tailscale deb owns tailscaled.service; postinst enables and starts it.
+# Version follows the repo (apt-layer policy: presence, not pinning).
+# Update recipe:
+#   sudo env WORKSTATION_APT_SNAPSHOT= bash modules/apt.sh tailscale
+# Key rotation / distro upgrade: see the header of tailscale.key.asc and
+# tailscale.sources under packages/apt/repos/.
+repo = tailscale
+tailscale

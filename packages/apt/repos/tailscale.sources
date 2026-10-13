@@ -1,0 +1,12 @@
+# Converged by modules/apt.sh to /etc/apt/sources.list.d/tailscale.sources.
+# Tailscale's official stable repository for Ubuntu 26.04 (resolute), as
+# published at https://pkgs.tailscale.com/stable/ubuntu/resolute.tailscale-keyring.list
+# (converted from the one-line deb format to deb822). Packages are verified
+# with packages/apt/repos/tailscale.key.asc, dearmored to the Signed-By path.
+# Distro upgrade: update Suites here and re-fetch the key for the new
+# codename if it changes, then rerun `bash modules/apt.sh tailscale` as root.
+Types: deb
+URIs: https://pkgs.tailscale.com/stable/ubuntu
+Suites: resolute
+Components: main
+Signed-By: /usr/share/keyrings/tailscale-archive-keyring.gpg
