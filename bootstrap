@@ -67,14 +67,20 @@ apply_dotfiles() {
   chezmoi init --source "$repo_root" \
     --promptString "profile=$profile" \
     --promptString "gitName=$git_name" \
-    --promptString "gitEmail=$git_email"
+    --promptString "gitEmail=$git_email" \
+    --promptString "repoDir=$repo_root"
   local force=()
   [[ "${WORKSTATION_APPLY_FORCE:-}" == 1 ]] && force+=(--force)
   chezmoi apply "${force[@]}"
 }
 run_phase dotfiles apply_dotfiles
 
-# Phase 4: developer toolchains, from the chezmoi-projected global config.
+# Phase 4: GNOME settings (only the desktop profile has a session to speak to).
+if [[ "$profile" == desktop ]]; then
+  run_phase desktop bash "$repo_root/modules/desktop.sh" gnome
+fi
+
+# Phase 5: developer toolchains, from the chezmoi-projected global config.
 # --locked makes mise refuse to resolve anything the lockfile has not pinned.
 apply_toolchains() {
   mise trust --quiet "$HOME/.config/mise/config.toml"

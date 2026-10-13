@@ -51,8 +51,19 @@ if ! command -v chezmoi >/dev/null 2>&1 || [[ ! -f "$HOME/.config/chezmoi/chezmo
 else
   # chezmoi status exits 0 even when it lists drifted targets, so turn a
   # non-empty listing into a failing check whose output names the targets.
+  # The "R" (pending run-script) marker is filtered out: run_ scripts
+  # re-execute on every apply and never reach an "applied" state by design.
   run_check dotfiles bash -c \
-    'out=$(chezmoi status 2>&1); [[ -z "$out" ]] || { printf "%s\n" "$out"; exit 1; }'
+    'out=$(chezmoi status 2>&1 | grep -vE "^[[:space:]]*R[[:space:]]" || true); [[ -z "$out" ]] || { printf "%s\n" "$out"; exit 1; }'
+fi
+
+# Layer: GNOME desktop settings. Needs the session D-Bus; in headless
+# contexts (e.g. a timer before login) the layer is unreachable, which is
+# reported as a skip, not as drift.
+if [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]]; then
+  run_check desktop env WORKSTATION_DESKTOP_CHECK=1 bash modules/desktop.sh gnome
+else
+  report+=("skip     desktop (no session D-Bus in this context)")
 fi
 
 # Layer: developer toolchains — installed set must match the pinned lock.
