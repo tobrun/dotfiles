@@ -36,7 +36,7 @@ run_check() {
 }
 
 # Layer: apt presence (root not required for a --check).
-run_check apt bash modules/apt.sh --check base
+run_check apt bash modules/apt.sh --check base docker
 
 # Layer: declared per-user applications (check mode: verify, never write).
 for decl in packages/apps/*.txt; do

@@ -1,0 +1,8 @@
+# Group: host container runtime.
+# The Docker engine for running sandbox images built from this repository.
+# Host-only group: docker/Dockerfile never installs this group (a sandbox
+# image does not carry its own container engine).
+# Ubuntu's docker.io ships dockerd + containerd without third-party apt
+# sources, keeping this module's "plain apt packages" contract intact.
+docker.io
+docker-compose-v2
