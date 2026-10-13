@@ -29,14 +29,16 @@ done
 # Restrict by declared platform explicitly (book 9.4: one supported arch first).
 platform=${WORKSTATION_DOCKER_PLATFORM:-linux/amd64}
 
+# Plain `docker build`: with the docker-buildx plugin installed (apt group
+# `docker`) this runs on the BuildKit backend, which the Dockerfile's cache
+# mounts require. Images land in the local docker store.
 note "building '$target' ($platform) from pinned inputs"
-docker buildx build \
+docker build \
   --file "$module_dir/Dockerfile" \
   --target "$target" \
   --build-arg UBUNTU_IMAGE="${inputs[ubuntu_image]}" \
   --build-arg MISE_IMAGE="${inputs[mise_image]}" \
   --platform "$platform" \
-  --load \
   --tag "workstation-$target:local" \
   "$repo_root"
 note "ok: workstation-$target:local"

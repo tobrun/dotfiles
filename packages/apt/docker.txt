@@ -4,5 +4,8 @@
 # image does not carry its own container engine).
 # Ubuntu's docker.io ships dockerd + containerd without third-party apt
 # sources, keeping this module's "plain apt packages" contract intact.
+# docker-buildx is required: the engine's BuildKit backend (cache mounts in
+# docker/Dockerfile) only activates through the client-side buildx plugin.
 docker.io
+docker-buildx
 docker-compose-v2

@@ -35,6 +35,9 @@ bash docker/run.sh --with-auth    # + bind-mount claude/opencode credentials
 
 ## Build notes
 
+- Plain `docker build` needs the **docker-buildx** plugin (part of the apt
+  `docker` group): the engine's BuildKit backend — required for the
+  Dockerfile's cache mounts — only activates through it.
 - `docker/inputs.txt` pins base + mise images by `@sha256` digest; bump
   deliberately via its update recipe.
 - Artifact fetch during image builds uses `WORKSTATION_APP_FETCH=1`: downloads
