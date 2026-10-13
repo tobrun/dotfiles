@@ -37,8 +37,13 @@ ENV MISE_DATA_DIR=/opt/mise \
     PATH="/opt/mise/shims:${PATH}"
 
 # The canonical declaration is projected; never edited inside the image.
-COPY toolchains/mise.toml /opt/toolchains/config.toml
-COPY toolchains/mise.lock /opt/toolchains/mise.lock
+# --chmod on COPY applies to implicitly created parent dirs too: without the
+# following chmod, /opt/toolchains itself lands mode 644 (no +x) and non-root
+# users get EPERM on anything inside. COPY would also preserve the source
+# mode of mise.lock (600), which dev must be able to read.
+COPY --chmod=644 toolchains/mise.toml /opt/toolchains/config.toml
+COPY --chmod=644 toolchains/mise.lock /opt/toolchains/mise.lock
+RUN chmod 755 /opt/toolchains
 WORKDIR /opt/toolchains
 RUN --mount=type=cache,target=/var/cache/mise \
     mise install --locked
@@ -51,8 +56,9 @@ RUN if getent passwd 1000 >/dev/null; then \
     else \
       useradd --create-home --uid 1000 --shell /bin/bash dev; \
     fi; \
-    mkdir -p /workspaces /var/cache/mise; \
-    chown dev: /workspaces /var/cache/mise
+    mkdir -p /workspaces /var/cache/mise \
+             /home/dev/.cache/workstation/apps; \
+    chown -R dev: /workspaces /var/cache/mise /home/dev/.cache
 
 USER dev
 ENV HOME=/home/dev
@@ -65,10 +71,11 @@ COPY modules/apps.sh /opt/workstation/modules/apps.sh
 COPY packages/apps/claude.txt packages/apps/opencode.txt /opt/workstation/packages/apps/
 # Fetching is opt-in and hash-gated: every artifact is downloaded from its
 # declaration's https source and must match the declared sha256 or the build
-# fails. Cache mount keeps artifacts out of the image layers.
+# fails. Cache mount keeps artifacts out of the image layers; uid/gid matter —
+# BuildKit creates fresh cache volumes root-owned and this step runs as dev.
 ENV PATH="/home/dev/.local/bin:${PATH}" \
     WORKSTATION_APP_FETCH=1
-RUN --mount=type=cache,target=/home/dev/.cache/workstation/apps,sharing=locked \
+RUN --mount=type=cache,target=/home/dev/.cache/workstation/apps,sharing=locked,uid=1000,gid=1000 \
     bash /opt/workstation/modules/apps.sh claude opencode
 # claude's self-updater must stay off so the pins stay authoritative.
 RUN mkdir -p /home/dev/.claude && printf '{\n  "env": {\n    "DISABLE_AUTOUPDATER": "1"\n  }\n}\n' > /home/dev/.claude/settings.json
