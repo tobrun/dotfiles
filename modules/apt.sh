@@ -8,7 +8,12 @@ fail() {
   exit 1
 }
 
-((EUID == 0)) || fail "run this module as root"
+check_only=0
+if [[ "${1:-}" == "--check" ]]; then
+  check_only=1
+  shift
+fi
+((EUID == 0 || check_only == 1)) || fail "run this module as root (or use --check)"
 (($# > 0)) || fail "provide at least one package group"
 
 module_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
@@ -44,6 +49,11 @@ done
 if ((${#missing[@]} == 0)); then
   printf 'apt: declared packages are present\n'
   exit 0
+fi
+
+if ((check_only == 1)); then
+  printf 'apt: drift — packages missing: %s\n' "${missing[*]}" >&2
+  exit 1
 fi
 
 declare -a apt_options=(-o APT::Update::Error-Mode=any)
