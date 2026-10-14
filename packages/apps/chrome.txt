@@ -24,7 +24,7 @@
 #     sha256 cafff3f34be8ee628ff7f819496cda2f79006572e2a8fba48186797b103ee6d6
 
 name = chrome
-title = Chromium
+title = Chrome for Testing
 version = 155.0.8059.39
 binary = chrome
 prefix = chrome-linux64

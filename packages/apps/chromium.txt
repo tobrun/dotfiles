@@ -1,0 +1,52 @@
+# Declaration for the per-user `chromium` browser — the Chromium-branded
+# build that owns the user's real browsing profiles in ~/.config/chromium
+# (logins, history; ~784 MB as of 2026-10-14). Distinct from `chrome`
+# (packages/apps/chrome.txt): Chrome for Testing keeps its data in
+# ~/.config/google-chrome-for-testing and is tuned for agent automation.
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   Source: Chromium snapshot bucket (download-chromium.appspot.com redirect,
+#   originally fetched 2026-10-13). The bucket URL is EPHEMERAL (it rotates to
+#   the latest snapshot), so `source` below records where the artifact CAME
+#   FROM, not a re-fetchable URL. The archive is retained in
+#   ~/.cache/workstation/apps/ and `sha256` is the LOCAL RECOVERY ANCHOR
+#   (chrome.txt rollback record, verified against the cached zip 2026-10-14).
+#   Version policy: PINNED. Re-acquiring a different snapshot means a fresh
+#   provenance note; there is no re-download recipe for this exact build.
+#   The profile dir is brand-determined: a Chromium-branded build always uses
+#   ~/.config/chromium, which is how this entry finds the existing profiles
+#   with zero flags.
+#
+#   History: installed 2026-10-13 as the first `chrome` app; superseded the
+#   same day when `chrome` was repinned to Chrome for Testing 155. The
+#   versioned install survived at ~/.local/apps/chrome/158.0.8104.0; this
+#   declaration re-homes it as the `chromium` app (module never removes
+#   versions, so the old tree lingers harmlessly until pruned by hand).
+#
+#   ONE-TIME ROOT STEP: the AppArmor userns profile is per-app-path, so the
+#   new location needs its own profile (the module prints the exact sudo
+#   commands). Until installed, the sandbox is denied (Ubuntu 23.10+).
+
+name = chromium
+title = Chromium
+version = 158.0.8104.0
+binary = chrome
+prefix = chrome-linux
+archive = chrome-158.0.8104.0.zip
+sha256 = cafff3f34be8ee628ff7f819496cda2f79006572e2a8fba48186797b103ee6d6
+source = https://commondatastorage.googleapis.com/chromium-browser-snapshots/index.html?prefix=Linux_x64/
+desktop = true
+icon = product_logo_48.png
+comment = Web browser (profiles in ~/.config/chromium)
+categories = Network;WebBrowser;
+# Same window class as chrome.desktop (both report the Chromium WM_CLASS);
+# grouping is shared when both run side by side — accepted trade-off.
+startup_wm_class = chromium-browser
+mimetype = x-scheme-handler/http;x-scheme-handler/https;
+# Same AppArmor userns situation as chrome.txt: the module generates the
+# profile, root installs it once.
+apparmor = true
+# Functional check: sandboxed headless render must succeed.
+smoke = true
+smoke_cmd = tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT; out=$("$APP" --headless=new --disable-gpu --user-data-dir="$tmp" --dump-dom about:blank 2>&1) && grep -q "<html>" <<<"$out"
