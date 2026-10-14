@@ -77,3 +77,18 @@ never hand-append exports to `~/.bashrc`.
 - Signing key `14BAFBC7562AD710CA04E69905FBB6DA60DF8A40` (Kitmaker/
   Ubuntu-26.04, NVIDIA's per-release signing key) — pinned in
   `packages/apt/repos/nvidia.key.asc`, verified against the repo InRelease.
+
+## Converged state (verified 2026-10-14)
+
+- Converged via `sudo bash modules/apt.sh nvidia` + reboot: driver
+  `nvidia-open 615.71.09` (DKMS built for 7.0.0-38-generic, RTX 4090 up),
+  toolkit `cuda-toolkit` 13.4.92 at `/usr/local/cuda-13.4`.
+- Residue from the first (pre-declaration) attempt was purged with
+  `sudo apt purge cuda-toolkit-13-0 cuda-keyring && sudo apt autoremove
+  --purge` — that removed the stray ubuntu2404 repo file, NVIDIA's pin
+  file, and the duplicate keyring. `nvidia.sources` +
+  nvidia-archive-keyring.gpg are now the only CUDA repo sources on the
+  machine. Note the apt module is presence-only: it proves the declared
+  set is present, never that nothing undeclared crept in — the
+  `sources.list.d` + `apt-mark showmanual` review above is that check.
+- `scripts/drift.sh`: all layers converged.
