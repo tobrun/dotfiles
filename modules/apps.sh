@@ -165,7 +165,12 @@ install_app() {
         printf 'Type=Application\n'
         printf 'Version=1.0\n'
         printf 'Name=%s\n' "${f[title]}"
-        printf 'Exec=%s/%s\n' "$bin_dir" "$app"
+        # Optional `exec_args` are launcher-only flags (e.g. chrome's
+        # --disable-infobars); terminal launches of ~/.local/bin/$app are
+        # flag-free by design — the symlink is the bare binary.
+        local exec_line="$bin_dir/$app"
+        [[ -z "${f[exec_args]:-}" ]] || exec_line+=" ${f[exec_args]}"
+        printf 'Exec=%s %%U\n' "$exec_line"
         [[ -z "${f[comment]:-}" ]] || printf 'Comment=%s\n' "${f[comment]}"
         # The icon key always resolves: hicolor name we installed, else a
         # themed icon named by `icon_theme`, else the generic application icon.

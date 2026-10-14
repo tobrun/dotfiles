@@ -33,6 +33,11 @@ sha256 = 55672d1f392fd3e7b7a08621b6e804e6bcb39d40cf155504abb74b3a021ea8ea
 source = https://storage.googleapis.com/chrome-for-testing-public/155.0.8059.39/linux64/chrome-linux64.zip
 desktop = true
 icon = product_logo_48.png
+# CfT shows a permanent "only for automated testing" banner and ships no
+# auto-update; we accept both (version pinning IS the update recipe below).
+# The banner is suppressed at the launcher via CfT's own switch (only CfT
+# accepts it): https://chromium.googlesource.com/chromium/src/+/HEAD/docs/chrome_for_testing/README.md
+exec_args = --disable-infobars
 comment = Web browser
 categories = Network;WebBrowser;
 startup_wm_class = chromium-browser
