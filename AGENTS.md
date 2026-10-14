@@ -19,7 +19,9 @@ operating contract.
    `npm i -g`, hand-edited dotfiles) is drift. Resolve it by updating the
    declaration or re-converging — never by leaving the machine and repo
    disagreeing. If the user intentionally changed the machine, the repo
-   usually adopts the change; ask which side is the source of truth.
+   usually adopts the change; ask which side is the source of truth. Project
+   checkouts under `~/ws/` are excluded state — never declared, inventoried,
+   or referenced here (see README "Excluded state").
 
 ## Repository map
 

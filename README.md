@@ -43,6 +43,7 @@ it. The ideas this repo is built on:
 | GNOME desktop settings | desktop module | `packages/desktop/*.txt` | active |
 | Language runtimes / dev CLIs | mise | `toolchains/mise.toml` + lock | active |
 | Container packaging | Dockerfile (same modules + declarations) | `docker/` | active |
+| Project source (`~/ws/<project>`) | each project's own git remote | *never stored here* | excluded |
 
 Do not install the same tool through two owners. The package owner and the
 effective executable must agree. In particular, **bootstrap tools (chezmoi, mise)
@@ -50,6 +51,26 @@ stay out of mise itself** — they are pinned below and installed by hand, becau
 they run the convergence and cannot be converged by it. (The mise registry entry
 `opencode` is the older 1.x product line and must not be used; see
 `packages/apps/opencode.txt`.)
+
+## Excluded state (never in this repository)
+
+Recovery means rebuilding from declarations; some state deliberately has other
+owners. This repo never stores, inventories, or pushes it:
+
+- **Project checkouts under `~/ws/`** — work lives in `~/ws/<project>` and each
+  project is owned by its own git remote; recovery is cloning from there.
+  Project lists, private remote URLs, and project content must not appear in
+  this repository (it is pushed); that inventory belongs to your backup/remote
+  system, not the workstation declaration. The only thing under `~/ws/` that
+  this repo is about is its own checkout.
+- **Credentials and identity** — SSH keys, tokens, and git identity come from
+  separately recovered machine data (chezmoi config) or a credential system;
+  templates reference them, files never hardcode them.
+- **Observations** — drift reports and package inventories live under
+  `~/.local/state/workstation/`: evidence, not declarations.
+
+Drift checks and `chezmoi` only ever look at declared paths, so a clean
+`drift.sh` result says nothing — and leaks nothing — about `~/ws/`.
 
 ## Prerequisites (bootstrap tools, pinned)
 
