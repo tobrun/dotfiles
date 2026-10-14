@@ -35,6 +35,15 @@ desktop = true
 comment = Code editor
 categories = Utility;TextEditor;
 startup_wm_class = VSCodium
+# Themed icon: the tarball ships no icon, so the upstream logo is committed
+# verbatim to the dotfiles layer (home/dot_local/share/icons/hicolor/
+# scalable/apps/code.svg) and referenced by hicolor name here.
+# Provenance: https://raw.githubusercontent.com/VSCodium/vscodium/1.135.06055/
+#   icons/stable/codium_cnl.svg  (the icon the deb installs)
+#   sha256 9817036bd2f5add672e707da311a301033ad122d6c2c505c776cb48d35b94472
+# Updating: on version bumps, re-download that path at the new tag; if the
+# sha256 changed, re-verify visually and replace the file in home/.
+icon_theme = code
 
 # Sandbox requirements: same as chrome.txt — Ubuntu blocks the userns sandbox
 # for unconfined binaries via AppArmor, and the extracted chrome-sandbox
