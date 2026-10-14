@@ -1,0 +1,17 @@
+# Converged by modules/apt.sh to /etc/apt/sources.list.d/docker.sources.
+# Docker's official CE repository for Ubuntu 26.04 (resolute), as published
+# at https://docs.docker.com/engine/install/ubuntu/ (converted from the
+# one-line deb format to deb822). Only the `stable` component is declared.
+# Packages are verified with packages/apt/repos/docker.key.asc, dearmored
+# to the Signed-By path.
+# Scope note: this repo supplies `docker-sbx` only (group: sbx). The
+# docker-ce suite it also offers is never installed — the host container
+# engine stays the Ubuntu-archive docker.io family declared in
+# packages/apt/docker.txt.
+# Distro upgrade: update Suites here and re-verify the key for the new
+# codename, then rerun `bash modules/apt.sh sbx` as root.
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: resolute
+Components: stable
+Signed-By: /usr/share/keyrings/docker-archive-keyring.gpg

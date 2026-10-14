@@ -1,0 +1,23 @@
+# Group: coding-agent microVM runtime (Docker Sandboxes, `sbx` CLI).
+# Host-only group: sandbox images never carry their own agent runtime.
+# `sbx` is not in the Ubuntu archive, so this group binds Docker's official
+# apt repository (repo = docker -> packages/apt/repos/docker.*). This is the
+# SBX-only installation path from the installation guide (repo + package);
+# the get.docker.com convenience script that layers Engine + SBX is NOT the
+# path here — the existing Ubuntu-archive engine (group: docker) is kept and
+# the docker-ce suite from this repo is never installed.
+# Version follows the repo (apt-layer policy: presence, not pinning).
+# Declared at 0.48.0-1~ubuntu.26.04~resolute (stable, amd64),
+# deb sha256 fd1ed343a9e8cd90e55586a168a2c459d25cc0dd7b9b228911fa642000b4acd4,
+# as published in dists/resolute/stable/binary-amd64/Packages on 2026-10-14.
+# Runtime cloud workflows require >= 0.45.0 per the install guide.
+# Update recipe:
+#   curl -fsS https://download.docker.com/linux/ubuntu/dists/resolute/stable/binary-amd64/Packages.gz \
+#     | zcat | grep -A14 -m1 '^Package: docker-sbx$'   # read Version + SHA256
+#   sudo bash modules/apt.sh sbx                       # converge
+#   # re-record the version + sha256 lines above, then scripts/drift.sh
+# Runtime prerequisites are host state, not packages: /dev/kvm + `kvm` group
+# membership, `sbx login`, and the lockdown settings — see
+# docs/runbooks/fleet-host.md.
+repo = docker
+docker-sbx
