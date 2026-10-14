@@ -18,3 +18,11 @@ org.gnome.desktop.peripherals.touchpad tap-to-click = true
 org.gnome.shell favorite-apps = ['org.gnome.Nautilus.desktop', 'snap-store_snap-store.desktop', 'code.desktop', 'chromium.desktop']
 org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type = 'nothing'
 org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type = 'suspend'
+# Dash-to-dock layout (adopted from machine 2026-10-14; always-center-icons
+# is intent: full-width bottom dock must center its icons, not left-align).
+org.gnome.shell.extensions.dash-to-dock dock-position = 'BOTTOM'
+org.gnome.shell.extensions.dash-to-dock dock-fixed = true
+org.gnome.shell.extensions.dash-to-dock extend-height = true
+org.gnome.shell.extensions.dash-to-dock always-center-icons = true
+org.gnome.shell.extensions.dash-to-dock icon-size-fixed = true
+org.gnome.shell.extensions.dash-to-dock custom-theme-shrink = true
