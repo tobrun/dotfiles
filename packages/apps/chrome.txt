@@ -33,6 +33,10 @@ sha256 = 55672d1f392fd3e7b7a08621b6e804e6bcb39d40cf155504abb74b3a021ea8ea
 source = https://storage.googleapis.com/chrome-for-testing-public/155.0.8059.39/linux64/chrome-linux64.zip
 desktop = true
 icon = product_logo_48.png
+comment = Web browser
+categories = Network;WebBrowser;
+startup_wm_class = chromium-browser
+mimetype = x-scheme-handler/http;x-scheme-handler/https;
 
 # Sandbox requirements (Ubuntu 23.10+ blocks the userns sandbox for unconfined
 # binaries via AppArmor; the legacy SUID sandbox was removed from Chromium

@@ -31,7 +31,10 @@ prefix = .
 archive = VSCodium-linux-x64-1.135.06055.tar.gz
 sha256 = c09d8ac8dd7f52b09ee159ee24b440541dfd8f937a0f6f88cc428c78e48ee1f2
 source = https://github.com/VSCodium/vscodium/releases/download/1.135.06055/VSCodium-linux-x64-1.135.06055.tar.gz
-desktop = false
+desktop = true
+comment = Code editor
+categories = Utility;TextEditor;
+startup_wm_class = VSCodium
 
 # Sandbox requirements: same as chrome.txt — Ubuntu blocks the userns sandbox
 # for unconfined binaries via AppArmor, and the extracted chrome-sandbox

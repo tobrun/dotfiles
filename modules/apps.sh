@@ -55,6 +55,10 @@ install_app() {
   [[ "${f[version]}" =~ ^[0-9][0-9a-zA-Z.+-]*$ ]] || fail "app '$app': invalid version"
   [[ "${f[sha256]}" =~ ^[0-9a-f]{64}$ ]] || fail "app '$app': sha256 must be 64 hex chars"
   [[ "${f[archive]}" != */* ]] || fail "app '$app': archive must be a bare file name"
+  for key in terminal desktop apparmor smoke; do
+    [[ -z "${f[$key]:-}" || "${f[$key]}" == true || "${f[$key]}" == false ]] ||
+      fail "app '$app': key '$key' must be true or false"
+  done
 
   local app_dir="$apps_root/$app"
   local dest="$app_dir/${f[version]}"
@@ -142,7 +146,10 @@ install_app() {
     ln -sfn -- "$app_dir/current/${f[binary]}" "$bin_dir/$app"
   fi
 
-  # desktop entry and icon
+  # Desktop entry and icon (opt-in: `desktop = true`). Every field below comes
+  # from the declaration, so the module is not tied to any one kind of app:
+  # a browser declares Categories/MimeType, a GUI editor declares its
+  # StartupWMClass, a terminal app sets terminal = true.
   if [[ "${f[desktop]:-false}" == "true" ]]; then
     if ((check_only == 1)); then
       [[ -f "$desktop_dir/$app.desktop" ]] ||
@@ -153,19 +160,28 @@ install_app() {
         mkdir -p -- "$icon_dir"
         install -m 0644 -- "$dest/${f[icon]}" "$icon_dir/$app.png"
       fi
-      cat > "$desktop_dir/$app.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Version=1.0
-Name=${f[title]}
-Comment=Web browser (${f[version]}, managed by workstation apps module)
-Exec=$bin_dir/$app %U
-Icon=$app
-Terminal=false
-Categories=Network;WebBrowser;
-StartupWMClass=chromium-browser
-MimeType=x-scheme-handler/http;x-scheme-handler/https;
-EOF
+      {
+        printf '[Desktop Entry]\n'
+        printf 'Type=Application\n'
+        printf 'Version=1.0\n'
+        printf 'Name=%s\n' "${f[title]}"
+        printf 'Exec=%s/%s\n' "$bin_dir" "$app"
+        [[ -z "${f[comment]:-}" ]] || printf 'Comment=%s\n' "${f[comment]}"
+        # The icon key always resolves: hicolor name we installed, else a
+        # themed icon named by `icon_theme`, else the generic application icon.
+        if [[ -n "${f[icon]:-}" && -f "$icon_dir/$app.png" ]]; then
+          printf 'Icon=%s\n' "$app"
+        elif [[ -n "${f[icon_theme]:-}" ]]; then
+          printf 'Icon=%s\n' "${f[icon_theme]}"
+        else
+          printf 'Icon=application-x-executable\n'
+        fi
+        printf 'Terminal=%s\n' "${f[terminal]:-false}"
+        printf 'Categories=%s\n' "${f[categories]:-Utility;}"
+        [[ -z "${f[startup_wm_class]:-}" ]] ||
+          printf 'StartupWMClass=%s\n' "${f[startup_wm_class]}"
+        [[ -z "${f[mimetype]:-}" ]] || printf 'MimeType=%s\n' "${f[mimetype]}"
+      } > "$desktop_dir/$app.desktop"
       update-desktop-database -- "$desktop_dir" 2>/dev/null || true
     fi
   fi
