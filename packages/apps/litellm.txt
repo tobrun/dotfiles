@@ -2,9 +2,14 @@
 # Parsed by modules/apps.sh: `key = value`, one per line.
 #
 # Role on this machine: the fleet's inference gateway (see
-# docs/runbooks/fleet-host.md, "Phase 3"). Sandboxes reach it on localhost
-# only; it holds the one real upstream credential and hands out per-sandbox
-# keys. Not a general-purpose user tool.
+# docs/runbooks/fleet-host.md, "Inference gateway"). It holds the one real
+# upstream credential and hands out per-sandbox keys. It is a long-running
+# service, not a command: it runs as the `litellm.service` user unit
+# (chezmoi-managed; ExecStart on the standard launcher, which supplies the
+# bind address, config and EnvironmentFile the service needs). A bare
+# `litellm` invocation starts an unconfigured proxy — apps.sh creates the
+# launcher for every app as the smoke-test entry point, but hand-running
+# this one is not the supported path.
 #
 # Provenance policy:
 #   LiteLLM is a Python project; its canonical channel is PyPI, and PyPI

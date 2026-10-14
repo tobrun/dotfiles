@@ -12,3 +12,7 @@ if ! command -v systemctl >/dev/null 2>&1 ||
 fi
 systemctl --user daemon-reload
 systemctl --user enable --now workstation-drift.timer
+{{ if eq .profile "desktop" }}
+# The inference gateway is a desktop-host service (containers never run it).
+systemctl --user enable --now litellm.service
+{{ end }}

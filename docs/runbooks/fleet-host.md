@@ -173,25 +173,58 @@ task-001 evidence table.)
 ## Inference gateway (LiteLLM, host)
 
 Declared as app `litellm` (`packages/apps/litellm.txt`, vendored-tree
-provenance — read its header before bumping). Converged and smoke-tested;
-**not yet running: blocked on the upstream credential handoff** (remote
-model server URL + API key, to be delivered as a `0600` file under
-`~/.config/litellm/`, never pasted into chat or shell history). Operating
-contract once unblocked:
+provenance — read its header before bumping). **Live since 2026-10-14** as
+the `litellm.service` user unit (chezmoi-managed; `systemctl --user
+status litellm`). Upstream: one OpenAI-compatible server on the LAN; its
+URL and model id live in chezmoi data (`inferenceBaseUrl`,
+`inferenceModel` in `~/.config/chezmoi/chezmoi.toml`), never in this repo;
+the gateway serves the server's own model id, verbatim. Keys/bind in
+`~/.config/litellm/gateway.env` (0600).
 
-- Serve on `127.0.0.1:<port>` only; sandboxes reach it at
-  `host.docker.internal:<port>` and the per-sandbox allow resource is
-  `localhost:<port>` (plus the gateway deny of every direct provider host,
-  already in `fleet/envs/contexia.txt`).
-- One real upstream key lives in the gateway config; sandboxes get
-  per-task virtual keys (expiry + model allowlist) injected with
-  `sbx secret set-custom`, so keys stay out of commands, history, and
-  sandbox config.
-- The gateway exposes the remote server's own model IDs; provider selection
-  inside the agent is locked to the proxy (`enabled_providers`) with agent
-  self-edit of its config denied.
-- Acceptance for this section: the book ch 10.3 tool-loop test executed
-  through the gateway from inside task-001 (plan's designated main risk).
+Operating contract (measured 2026-10-14):
+
+- Serves `127.0.0.1:4000` only. Sandboxes reach it at
+  `host.docker.internal:4000`; the egress proxy **normalizes that to
+  policy resource `localhost:4000`** — allow rules on
+  `host.docker.internal` do not match. First contact also raises a
+  `policy approval` for `localhost:4000`; respond once per sandbox
+  (`sbx policy approval ls` / `respond <id> --option allow`).
+- Credentials: `sbx secret set-custom --sandbox <task> --host localhost
+  --env GATEWAY_API_KEY --command "grep '^LITELLM_MASTER_KEY=' ~/.config/
+  litellm/gateway.env | cut -d= -f2"` (exact form in
+  `fleet/envs/contexia.txt`). The sandbox only ever sees the generated
+  **placeholder** — non-secret, safe in commands; the proxy rewrites the
+  `Authorization` header toward `localhost` with the real master key,
+  which never enters the sandbox.
+- Placeholder → real substitution is keyed on the placeholder value in
+  `Authorization: Bearer …`. The openai-compatible SDK defaults to
+  `x-api-key`, which the proxy does not rewrite — the in-sandbox opencode
+  config therefore pins `options.headers.Authorization` explicitly.
+  Env injection: custom-secret env vars reach agent (`sbx run`) sessions;
+  `sbx exec` sessions need `-e GATEWAY_API_KEY=<placeholder>`.
+- DB-less by necessity: LiteLLM virtual keys require Prisma, whose engine
+  binary is fetched at runtime — violates the apps-layer provenance rule.
+  Consequences: `/v1/models` answers "No connected db." (harmless; agents
+  declare models statically), and **revocation = rotate
+  `LITELLM_MASTER_KEY` in gateway.env + `systemctl --user restart
+  litellm`** (invalidates all sandboxes at once — acceptable while the
+  fleet is one host's own sandboxes; revisit with the ch 15 ledger db).
+- Agent side (task-001): `~/.config/opencode/opencode.json` declares the
+  provider with `baseURL http://host.docker.internal:4000/v1`, pins
+  `model` to `gateway/<server-model-id>`, and locks
+  `enabled_providers: ["gateway"]` so no other provider can activate.
+  Kit's `OPENAI_API_KEY=proxy-managed` is owned by the kit — never
+  override it; a custom secret on that env name is shadowed (measured).
+- Acceptance (ch 10.3 tool loop): **passed 2026-10-14 from inside
+  task-001** — streamed `opencode run` task reasoned, called bash to
+  locate a file, wrote `GATEWAY_TEST.md`, read it back, reported
+  correctly; every inference hop traversed proxy → gateway → upstream.
+  Workspace restored clean afterwards (`git status` empty).
+- Follow-ups: deny agent self-edit of its own config (no filesystem
+  policy verb in 0.48.0's `policy allow`; only `network` — investigate
+  mounts or template re-bake); inert duplicate secret on env
+  `OPENAI_API_KEY` from an early probe (custom secrets have no `rm`
+  path in 0.48.0; same credential + host, no privilege difference).
 
 ## Tailscale administration path
 

@@ -3,5 +3,7 @@
 .config/mise/mise.lock
 .config/systemd/user/workstation-drift.service
 .config/systemd/user/workstation-drift.timer
+.config/systemd/user/litellm.service
+.config/litellm/config.yaml
 .gitconfig
 {{ end }}

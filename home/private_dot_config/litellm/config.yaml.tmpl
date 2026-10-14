@@ -1,0 +1,26 @@
+# LiteLLM gateway config — fleet inference front door.
+# Managed by chezmoi (home/private_dot_config/litellm/config.yaml.tmpl).
+# Keys come from gateway.env (0600, NOT in the repo) via os.environ; the
+# upstream URL and model id are machine data in ~/.config/chezmoi/
+# chezmoi.toml (same pattern as gitName). Upstream facts:
+# docs/runbooks/fleet-host.md ("Inference gateway").
+model_list:
+  # Model id is the upstream server's own id, verbatim — the fleet exposes
+  # what the server calls its models, never invented aliases. The cheap
+  # tier (ch 6.4) is a second entry only when the server offers a second
+  # model; it currently serves exactly one.
+  - model_name: {{ .inferenceModel }}
+    litellm_params:
+      model: openai/{{ .inferenceModel }}
+      api_base: {{ .inferenceBaseUrl }}
+      api_key: os.environ/UPSTREAM_API_KEY
+
+litellm_settings:
+  # Master key only — no database. LiteLLM virtual keys require the
+  # Prisma layer, whose engine binary is fetched at runtime; that breaks
+  # this repo's pinned-app provenance rules (packages/apps/litellm.txt),
+  # so the gateway stays DB-less. Per-sandbox isolation is injected
+  # credentials (sbx secret) + network policy; revocation is rotate
+  # LITELLM_MASTER_KEY in gateway.env + restart the unit. Revisit when
+  # the ch 15 ledger brings a declared database.
+  master_key: os.environ/LITELLM_MASTER_KEY

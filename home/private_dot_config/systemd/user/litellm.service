@@ -1,0 +1,21 @@
+[Unit]
+Description=LiteLLM inference gateway (fleet front door)
+After=network-online.target
+Documentation=file://%h/ws/dotfiles/docs/runbooks/fleet-host.md
+
+[Service]
+# Launcher from the apps layer (packages/apps/litellm.txt); the unit is the
+# only supported way to run this service — it supplies config, bind address
+# and the EnvironmentFile with the keys (0600, not in the repo).
+# Binding is loopback-only by design: sandboxes reach the gateway through
+# the sandbox daemon's host relay (policy resource localhost:4000), never
+# over a LAN-facing socket.
+ExecStart=%h/.local/bin/litellm --config %h/.config/litellm/config.yaml --host 127.0.0.1 --port 4000
+EnvironmentFile=%h/.config/litellm/gateway.env
+Restart=on-failure
+RestartSec=2
+# Housekeeping for the SQLite key store + gateway logs live in
+# ~/.local/state/litellm/ (declared in config.yaml).
+
+[Install]
+WantedBy=default.target

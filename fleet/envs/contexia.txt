@@ -28,8 +28,18 @@ verify = export PATH=$HOME/.local/node/bin:$PATH && pnpm install --frozen-lockfi
 deny = api.anthropic.com:443, claude.ai:443, console.anthropic.com:443, chatgpt.com:443, openai.com:443, api.openai.com:443, auth.openai.com:443, api.groq.com:443, api.x.ai:443, openrouter.ai:443, generativelanguage.googleapis.com:443, aiplatform.googleapis.com:443, vertexai.googleapis.com:443, oauth2.googleapis.com:443, api.githubcopilot.com:443, api.business.githubcopilot.com:443, api.enterprise.githubcopilot.com:443, api.individual.githubcopilot.com:443, copilot.github.com:443, github.com:443, api.github.com:443, codeload.github.com:443, raw.githubusercontent.com:443, **.githubusercontent.com:443
 # Allowed on evidence (sbx policy log shows every denial; growth stays
 # evidence-driven). Toolchain bootstrap rules retire when the Phase 5
-# template bakes Node 24 + pnpm.
-allow = registry.npmjs.org:443, nodejs.org:443
+# template bakes Node 24 + pnpm. localhost:4000 is the inference gateway:
+# sandbox requests to host.docker.internal:4000 are normalized by the
+# egress proxy to resource `localhost:4000` (measured 2026-10-14), and
+# first contact also raises a policy approval for that resource.
+allow = registry.npmjs.org:443, nodejs.org:443, localhost:4000
+# Gateway credential per sandbox (measured contract, runbook "Inference
+# gateway"): sbx secret set-custom --sandbox <task> --host localhost
+# --env GATEWAY_API_KEY --command "grep '^LITELLM_MASTER_KEY='
+# /home/nurbot/.config/litellm/gateway.env | cut -d= -f2". The sandbox
+# only ever sees the generated placeholder; the egress proxy substitutes
+# the real key in Authorization headers toward localhost.
+gateway_secret = custom:localhost:GATEWAY_API_KEY
 # Exchange convention: /srv/agent-exchange/<task> mounted read-write,
 # listed last (mount-order rule verified on 0.48.0).
 exchange = true
