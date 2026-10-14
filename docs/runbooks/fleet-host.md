@@ -162,6 +162,17 @@ their names, org, paths and model aliases deliberately not adopted):
    branch) fixed at registration, arguments regex-validated, JSONL audit
    log, bounded concurrency/timeouts. Until then, extraction is manual
    `git fetch sandbox-<task>` on the host.
+ 7. **Revision of point 1, measured at gateway go-live (2026-10-14)**:
+    per-task virtual keys are **not provided** — LiteLLM gates them behind
+    its Prisma layer, whose runtime engine fetch violates the apps-layer
+    provenance rule. Sandboxes share the master key, delivered as a
+    placeholder custom secret (value source is a host `--command`,
+    sandboxd-stored — not the OS keyring); isolation is network policy +
+    injected placeholder, revocation is key rotation. See "Inference
+    gateway" for the full contract.
+ 8. **Preview path revised from ch 14.4**: no `tailscale serve` route;
+    preview ports publish directly on the tailscale0 address via
+    `sbx ports`, see "Operator previews".
 
 Mount rules from the practitioner data (0.42.1): never `:ro`-mount a parent
 of the clone root (sandbox fails to start); a rw mount sharing ancestry with
@@ -225,6 +236,50 @@ Operating contract (measured 2026-10-14):
   mounts or template re-bake); inert duplicate secret on env
   `OPENAI_API_KEY` from an early probe (custom secrets have no `rm`
   path in 0.48.0; same credential + host, no privilege difference).
+
+## Operator previews (sbx ports on the tailnet)
+
+Book ch 14 implemented 2026-10-14 with one topology revision: instead of
+`tailscale serve` (ch 14.4 — needs root, persists across reboot, needs
+its own cleanup step), preview ports are published **directly on the
+tailscale0 address** — `sbx ports <task> --publish
+<tailscale-ip>:<host-port>:<sandbox-port>/tcp4`. Same audience (tailnet
+peers only, ACL-gated), no root, and the sandbox lifecycle owns the
+route. Measured: `100.113.6.60:18001 → :3000` answered 200 while the LAN
+interface refused the same port. The SSH-tunnel route (ch 14.3) stays as
+the fallback whenever SSH reaches the host. Never publish on `0.0.0.0`
+or the LAN address.
+
+Contract per preview:
+
+- Reserve host ports from a fixed table (`18001` app dev server, `18002`
+  agent session), check conflicts first (`ss -tln`), and record the
+  mapping `sbx ports --json` actually returned. The durable preview
+  record lands with the ch 15 controller; until then the operator's task
+  note is the record. `sbx ports` also auto-publishes sandbox port 9418
+  (git) on ephemeral loopback — that is the extraction mechanism, not a
+  preview.
+- Guest dev servers: bind `0.0.0.0` **inside the sandbox** (measured:
+  Next dev needs `--hostname 0.0.0.0`; its loopback-only default is
+  unreachable through the publish path). Guest `curl` to non-loopback
+  addresses traverses the egress proxy (`http_proxy`), so a 403 on a
+  self-IP probe is the policy speaking, not the app. contexia's web dev
+  server requires `CONTEXIA_API_URL` at boot; the full web+api+db preview
+  needs the integration allow rules (deferred with compose), so today's
+  verified preview served with a stub API URL — enough to prove every
+  hop.
+- Agent-session preview: `opencode serve --hostname 0.0.0.0 --port 4096`
+  with `OPENCODE_SERVER_PASSWORD` set — without it the server is
+  unsecured (it warns). Generate the password per session, keep it in
+  `~/.local/state/fleet/previews/<task>.serve.pass` (0600), verify
+  unauthenticated → 401 and basic-auth → 200, and delete the file at
+  teardown.
+- Teardown order (ch 14.6, measured): **unpublish first, verify the route
+  is dead, then kill the guest processes**, then remove the password
+  file. `sbx ports <task>` must show only the auto 9418 afterwards.
+- Previews are generated output (ch 14.5): disposable data only; cookies
+  are not port-scoped, so isolation-sensitive sessions need distinct
+  hostnames, not just ports.
 
 ## Tailscale administration path
 
