@@ -39,7 +39,7 @@ it. The ideas this repo is built on:
 | --- | --- | --- | --- |
 | Ubuntu packages | apt module | `packages/apt/*.txt` | active |
 | Third-party apps & binaries (per-user) | apps module | `packages/apps/*.txt` | active |
-| Personal files (shell, git config, systemd units, mise config copies) | chezmoi | `home/` | active |
+| Personal files (shell, git config, systemd units, mise config copies, OpenCode skills) | chezmoi | `home/` | active |
 | GNOME desktop settings | desktop module | `packages/desktop/*.txt` | active |
 | Language runtimes / dev CLIs | mise | `toolchains/mise.toml` + lock | active |
 | Container packaging | Dockerfile (same modules + declarations) | `docker/` | active |
@@ -171,6 +171,11 @@ The host engine itself is the apt group `packages/apt/docker.txt` (installed by
 
 ## Current manual notes
 
+- `~/.config/opencode/opencode.json` and `service.json` are **intentionally not
+  managed**: the config contains host/LAN addresses that must not enter the
+  (pushed) repository, and `service.json` is OpenCode's own service-registration
+  runtime state. Only the skills tree under `~/.config/opencode/skills/` is
+  declared (via `home/`); machine-local OpenCode config stays machine-local.
 - `~/.opencode/` (old curl-installer copy and PATH entry) is no longer used — the
   managed launcher is `~/.local/bin/opencode`. Delete `~/.opencode` once no
   running process holds it (this session included).
