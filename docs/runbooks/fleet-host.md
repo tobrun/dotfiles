@@ -193,6 +193,12 @@ their names, org, paths and model aliases deliberately not adopted):
     fleet-wide secret, `sbx-cs-fleet-gateway`, whose placeholder is baked
     into the reviewed config; per-sandbox secret registration, `sbx exec
     -e` injection, and the first-contact gateway approval are all retired.
+ 10. **Phase 6 delivered (2026-10-14): first host MCP broker live** —
+    git-push (`fleet/brokers/git-push.py`, registered as `broker-git` on
+    the host clone). The §8.5 contract and measured boundary evidence
+    live in "Host MCP broker". Extraction stays `git fetch
+    sandbox-<task>` on the host; the broker adds the missing **publication**
+    step for already-extracted `agent/*` branches.
 
 Mount rules from the practitioner data (0.42.1): never `:ro`-mount a parent
 of the clone root (sandbox fails to start); a rw mount sharing ancestry with
@@ -386,6 +392,78 @@ chat **200** via the baked placeholder with **no** first-contact approval;
 loop wrote/re-read `GATEWAY_LOOP.md`; extraction probe `59b2f136` reached
 the host clone with the declared identity (probe refs removed both sides,
 clones clean).
+
+## Host MCP broker (git-push)
+
+Book §8.5, live 2026-10-14 (topology revision 10). §8.5 says: start with
+**no** host MCP tools; when adding one, document implementation,
+credential, operation set, and expected caller, and test its own boundary.
+That is what this section is.
+
+**Implementation.** `fleet/brokers/git-push.py` — an MCP stdio server
+(JSON-RPC 2.0, protocol 2025-06-18) hand-rolled on the Python standard
+library, pinned in-repo. Registered with
+`sbx mcp add broker-git --command <abs path> --dir /srv/agent-sources/contexia`
+(interface: `docs/records/sbx-0.48.0/sbx-mcp-add.txt`, `sbx-mcp-load.txt`).
+`add` spawns and validates the server at the registration `--dir`. Docker's
+own help text warns that `--command` servers run **on the host, as the host
+user, with no sandboxing**; that is accepted here only because the reviewed
+repo file is the whole implementation — no dependencies, no fetches, no
+interpreter magic.
+
+**Credential.** The broker process inherits the operator account's access
+(ssh key to `origin`). Nothing credential-shaped ever crosses into a
+sandbox: the agent sees tool results only. There is no secret to rotate
+for the broker itself; revoking it is `sbx mcp rm broker-git --force`.
+
+**Operation set (closed).**
+- `push_branch{branch}` — `branch` must match
+  `^agent/[A-Za-z0-9][A-Za-z0-9._/-]{0,127}$` with `..`, `@{`, `:`,
+  whitespace, `~^?*[\` and dash/dot-leading segments refused; then the ref
+  must exist locally (`git rev-parse --verify`); then
+  `git push origin refs/heads/<b>:refs/heads/<b>` — the destination is
+  **derived from** the source, so no input can name another destination.
+  argv lists only, 120 s push timeout.
+- `list_branches{}` — read-only `for-each-ref refs/heads/agent/`.
+Repo dir and remote are fixed at registration, never tool args. The stdio
+loop is single-threaded by construction: one push at a time. Every call —
+including refusals — appends a JSON line to
+`~/.local/state/fleet/brokers/git-push.jsonl` (host state, outside every
+sandbox mount). `BROKER_GIT_DRY_RUN=1` is an operator-side registration
+option only; note `sbx mcp add` has **no env flag** and spawns with the
+daemon's environment, so dry-run cannot currently be set through an sbx
+registration — a future converger must wrap it (e.g. a `--dry-run`
+argv flag) if per-registration dry-run is wanted.
+
+**Expected caller.** Fleet task sandboxes, attached at create with
+`--static-mcp broker-git` or live with
+`sbx mcp load broker-git --sandbox <task>`; the agent sees the tools
+through the baked `mcp-gateway` config block. Workflow order matters: the
+broker pushes **host-clone** branches, so extraction (`git fetch
+sandbox-<task>`, revision 2) must land the `agent/*` branch on the host
+before publication can name it.
+
+**Boundary tests (measured, 2026-10-14).** Own boundary first, as an
+inert harness (bare `origin.git` + staging clone under
+`/tmp/opencode/broker-evidence`, rebuildable in four `git` commands):
+pushes of `main`, `agent/x:refs/heads/main`, `agent/../main`, and
+nonexistent `agent/ghost` were all refused; a real `agent/probe` push
+reached the harness origin; audit lines matched call-for-call, refusals
+included. Then through the real path: loaded live into task-002
+(`sbx mcp load broker-git-test --sandbox task-002`), the in-sandbox agent
+called the tools via the gateway — `agent/sbx-probe` pushed (audit shows
+`[new branch]`, `dry_run: false` confirming daemon-env spawn), `main`
+refused. One behavioral note worth keeping: the agent **reported a prompt
+injection** inside the `list_branches` output; the audit holds the actual
+bytes the tool returned — three `sha refs/heads/agent/*` lines, no prose —
+so the "injection" was a model hallucination (correctly not acted on). The
+audit log is the truth of what the agent saw; keep it that way.
+
+Production registration `broker-git` (`--dir /srv/agent-sources/contexia`)
+is live; the test registration was unloaded and removed. Pushing
+`agent/*` branches to the real `origin` is the mechanism's purpose, but
+has deliberately **not** been exercised against the real remote in this
+evidence — the first real task does that.
 
 ## Tailscale administration path
 
