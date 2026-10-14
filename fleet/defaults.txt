@@ -1,0 +1,32 @@
+# Fleet defaults — values every task-environment inherits unless its
+# profile in fleet/envs/<name>.txt overrides them. The converger
+# (modules/fleet.sh) arrives with Phase 2 execution; until then this file
+# is the declared contract, applied by hand per docs/runbooks/fleet-host.md.
+
+# Git identity injected into every sandbox at create time:
+#   sbx exec <name> -- git config --global user.name  "<gitName>"
+#   sbx exec <name> -- git config --global user.email "<gitEmail>"
+# Deliberately identical to the operator's host identity: fleet work is
+# the operator's own work product, and every repo touched sees a valid
+# author. The point is the mechanism, not concealment — sandbox commits
+# carry this declared value, never an accident of inheritance (see the
+# host-git-seeding measurement in docs/runbooks/fleet-host.md).
+gitName = tobrun
+gitEmail = tobrun.van.nuland@gmail.com
+
+# Directory conventions. Sources root holds one clean clone per repository
+# baseline at a recorded commit (never a daily checkout); templates root
+# holds exported template tars; exchange root holds one subdirectory per
+# task, mounted read-write into that task's sandbox for artifacts.
+# Exchange dirs must be siblings of — never parents of — clone roots:
+# a read-only mount above the clone root prevents the sandbox from
+# starting (mount rule, re-verify on this sbx version).
+sourcesRoot = /srv/agent-sources
+templatesRoot = /srv/agent-templates
+exchangeRoot = /srv/agent-exchange
+
+# Resource defaults for task-environment profiles (admission policy lives
+# in docs/runbooks/fleet-host.md: at most three concurrent 8 GiB envs).
+cpus = 4
+memory = 8g
+skills = off

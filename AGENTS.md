@@ -33,6 +33,7 @@ operating contract.
 | `modules/desktop.sh` | gsettings convergence from `packages/desktop/<profile>.txt` (`WORKSTATION_DESKTOP_CHECK=1`) |
 | `home/` | chezmoi source tree, projected onto `$HOME` (naming: `dot_x` → `.x`) |
 | `toolchains/mise.toml` + `mise.lock` | Canonical developer toolchains |
+| `fleet/defaults.txt` | Fleet-wide task-environment defaults (git identity, `/srv` roots, resource limits); profiles in `fleet/envs/` arrive with Phase 2 |
 | `packages/apt/base.txt` | System package pins (`name=version`) |
 | `docs/runbooks/` | Incident recovery procedures + hardware-layer rules (e.g. `nvidia-gpu.md`) |
 | `packages/apps/*.txt` | App declarations (version, sha256, launcher, smoke test) |

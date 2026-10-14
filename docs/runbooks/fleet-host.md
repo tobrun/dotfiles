@@ -57,8 +57,12 @@ sbx version
 
 `/srv` conventions: `agent-sources/<repo>` holds one clean clone per
 repository baseline at a recorded commit (never the daily checkout);
-`agent-templates` holds exported template tars; `models` is unused while
-inference is remote — kept reserved.
+`agent-templates` holds exported template tars; `agent-exchange/<task>`
+holds one task's artifact directory (rw mount, created per task, see
+`fleet/defaults.txt`); `models` is unused while inference is remote —
+kept reserved. Exchange dirs must never be ancestors of clone roots.
+(2026-10-14: `agent-exchange` still to create —
+`sudo mkdir -p /srv/agent-exchange && sudo chown nurbot:nurbot /srv/agent-exchange`.)
 
 ## sbx lockdown (applied 2026-10-14, as nurbot)
 
@@ -120,10 +124,15 @@ their names, org, paths and model aliases deliberately not adopted):
    create time (`sbx exec … git config --global …`) with a dedicated fleet
    bot name/email — overriding the host-identity seeding measured above.
    Value is a parameter (`fleet/` declaration), not hardcoded in scripts.
-4. **Per-task declarations live in `fleet/`** (top-level): network
-   allow-list, read-only context dirs, exchange path, provider config per
-   task-environment profile. Global policy stays `deny-all` + per-sandbox
-   allow rules; curated global allow-lists are rejected as weaker.
+4. **Per-task declarations live in `fleet/`** (top-level):
+   `fleet/defaults.txt` holds shared values (git identity decided
+   2026-10-14: the operator's own identity, declared per-sandbox rather
+   than inherited — see its header); `fleet/envs/<task>.txt` will hold one
+   profile per task-environment (repo baseline + commit, resources, per-task
+   network allow-list, read-only context dirs, exchange). The converger
+   `modules/fleet.sh` lands with Phase 2 execution. Global policy stays
+   `deny-all` + per-sandbox allow rules; curated global allow-lists are
+   rejected as weaker.
 5. **Templates**: build from `docker/sandbox-templates:<agent>` bases, ship
    via `docker save` + `sbx template load`, bump the tag on every change —
    sbx caches template images by tag.
