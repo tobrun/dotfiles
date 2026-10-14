@@ -12,12 +12,12 @@ Design rationale lives in `~/ws/books/REMOTE_CODING_AGENTS_IN_PRACTICE.md`
 | Item | Value | Consequence |
 | --- | --- | --- |
 | Release | Ubuntu 26.04.1 LTS (resolute), x86_64 | supported by `docker-sbx` |
-| KVM | `/dev/kvm` present; `nurbot` **not** in `kvm` group until prepared | blocking step below |
+| KVM | `/dev/kvm` group `kvm` (nurbot in `/etc/group` since 2026-10-14) + logind/uaccess ACL `user:nurbot:rw-` | two access paths: ACL for the active seat session, group from the next login |
 | RAM | 60 GiB (+7 GiB swap) | concurrency target is **3 tasks**, not the book's 10 |
 | GPU | RTX 4090, 24 GiB, idle | **unallocated spare** — inference runs on a remote server (deviation from the book's running example) |
 | Disk | 621 GiB root, ~544 GiB free | admission floor below |
 | Engine | Ubuntu-archive `docker.io` 29.1.3 (group `docker`) | coexists; `sbx` does not need it and the docker-ce suite stays uninstalled |
-| Tailscale | installed (group `tailscale`), logged out | Phase 0 enrolls |
+| Tailscale | enrolled 2026-10-14 (`desktop-1`, `100.113.6.60`) | admin path below; host SSH still off |
 | Fleet account | `nurbot` (desktop account; book ch 3.3 accepted trade-off) | everything below runs as `nurbot` |
 
 ## Memory budget (admission policy until measured otherwise)
@@ -37,6 +37,8 @@ row. Disk: stop new admission with under ~60 GiB free (export + diagnosis
 reserve); the 80 %-use mark is only a notification threshold.
 
 ## Preparation (root steps, run interactively)
+
+**Done 2026-10-14** — all five steps converged; kept here for rebuilds.
 
 ```bash
 sudo usermod -aG kvm nurbot                     # KVM access (re-login after)
@@ -58,7 +60,7 @@ repository baseline at a recorded commit (never the daily checkout);
 `agent-templates` holds exported template tars; `models` is unused while
 inference is remote — kept reserved.
 
-## sbx lockdown (run once after install, as nurbot)
+## sbx lockdown (applied 2026-10-14, as nurbot)
 
 ```bash
 sbx login                                       # browser OAuth; GUI session exists
@@ -69,9 +71,27 @@ sbx policy init deny-all
 ```
 
 Book ch 5.2: apply before active work exists; changing settings later is an
-interruption. Then capture the installed interfaces (`sbx version`,
-`sbx create/run/exec/ports/template save --help`, `sbx settings ls --json`)
-into the host record — help text proves the syntax of *this* installation.
+interruption. The four state changes are live (`ssh.agentForwardingEnabled`
+and `skills.defaultMode` show `source=override` in `sbx settings ls`;
+global policy is `deny-all`; `sbx diagnose` passes with authentication).
+The installed interfaces are snapshotted in
+`docs/records/sbx-0.48.0/` — help text proves the syntax of *this*
+installation; re-capture on every runtime bump.
+
+## First-sandbox boundary evidence (2026-10-14, sbx 0.48.0)
+
+Smoke sandbox `phase1-smoke` (agent `shell`, no workspace, `--cpus 2
+--memory 2g --skills off`), then removed. Measured, not assumed:
+
+| Claim | Evidence |
+| --- | --- |
+| Resource limits enforced | guest saw `nproc=2`, `MemTotal ≈ 1.94 GiB` |
+| Private engine per sandbox | guest `docker info` reported server 29.8.1 vs host docker.io 29.1.3 |
+| No SSH agent | `SSH_AUTH_SOCK=/run/ssh-agent.sock` is a stub: socket absent, `ssh-add` cannot connect, no identities |
+| Host git identity crosses in | guest `git config --global` was seeded with `user.name`/`user.email` from the host — task-authored commits inherit the human identity until Phase 5 gives sandboxes a bot identity (book ch 12) |
+| deny-all blocks HTTP(S) by name | `registry.npmjs.org` → `403`; `sbx policy log` records each hit: "No matching allow rule (default deny)" |
+| Raw `connect()` is **not** the boundary | `connect()` to `1.1.1.1:80`, `8.8.8.8:53`, tailnet `:22` all succeed (local egress interceptor completes the handshake) — but zero bytes flow: HTTP `GET` got an empty response, no sshd banner, no DNS answer. Verify boundaries at the **data** layer, never at the handshake; these direct-IP connects generate **no policy-log rows** (log covers named domains only) |
+
 
 ## Tailscale administration path
 

@@ -1,0 +1,6 @@
+SOURCE   CREATED VIA   APPLIES TO   POLICY             POLICY_ID      RULE   RULE_ID                      TYPE               METHOD   PATH   DECISION   PROTOCOLS   RESOURCES
+local    default       all          -                  local-policy   -      default-fs-read-allow-all    filesystem:read    -        -      allow      -           **
+                                                                                                                                                                    
+local    default       all          -                  local-policy   -      default-fs-write-allow-all   filesystem:write   -        -      allow      -           **
+                                                                                                                                                                    
+local    -             all          default-deny-all   -              -      default-deny-all             network            -        -      deny       tcp,udp     **

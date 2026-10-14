@@ -1,0 +1,20 @@
+Description:
+  Sign in to Docker
+
+Usage:
+  sbx login [flags]
+
+Examples:
+  sbx login
+
+  # Non-interactive sign-in, for CI
+  echo "$DOCKER_PAT" | sbx login --username me --password-stdin
+
+Flags:
+  -h, --help              help for login
+      --password-stdin    Read password or access token from stdin
+      --username string   Docker username for non-interactive login
+
+Global Flags:
+      --cloud   Dispatch to Docker Cloud Sandboxes API instead of local sandboxd (supported by a growing set of verbs — run 'sbx --cloud --help' for the current list)
+  -D, --debug   Enable debug logging

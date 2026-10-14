@@ -1,0 +1,2 @@
+SANDBOX        AGENT   STATUS      PORTS   WORKSPACE   CREATED
+phase1-smoke   shell   ○ stopped           -           1m
