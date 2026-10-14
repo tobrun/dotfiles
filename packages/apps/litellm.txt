@@ -1,0 +1,72 @@
+# Declaration for the per-user `litellm` application (LiteLLM AI gateway).
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Role on this machine: the fleet's inference gateway (see
+# docs/runbooks/fleet-host.md, "Phase 3"). Sandboxes reach it on localhost
+# only; it holds the one real upstream credential and hands out per-sandbox
+# keys. Not a general-purpose user tool.
+#
+# Provenance policy:
+#   LiteLLM is a Python project; its canonical channel is PyPI, and PyPI
+#   publishes no signing for these artifacts (verified 2026-10-14: has_sig
+#   false on the release files). The npm package named `litellm` is an
+#   unrelated project — do not confuse the two.
+#   The artifact below is therefore a VENDOR TREE built from the pinned
+#   package, and its `sha256` is a LOCAL RECOVERY ANCHOR in chrome.txt's
+#   sense: it detects corruption or substitution since the anchor date, not
+#   independent publisher verification. Independence comes from the
+#   dependency lock packages/apps/litellm.lock (362 entries, each pinned to
+#   the exact PyPI release file it resolves to, hash-checked by uv at
+#   install; regenerate + diff on every bump).
+#   The gateway binds localhost, so the anchor's exposure surface is local
+#   file replacement — the same trust base as every other app here.
+#
+#   Build recipe (rebuild the artifact for a version bump):
+#     1. lock:   cd <tmp>; pyproject.toml with
+#                  dependencies = ["litellm[proxy]==<ver>"], requires-python >=3.13
+#                uv pip compile --python-version 3.13 --python-platform linux \
+#                  pyproject.toml -o <new lock>   (replace packages/apps/
+#                  litellm.lock — committed dependency lock, NOT *.txt:
+#                  *.txt in that dir are declarations)
+#     2. install: uv venv --seed -p 3.13 v
+#                UV_NO_CACHE=1 uv pip install --python v/bin/python \
+#                  --no-cache -r litellm-<ver>.lock.txt
+#     3. pack:   tar --sort=name --mtime='UTC <date>' --owner=0 --group=0 \
+#                  --numeric-owner --exclude='__pycache__' --exclude='*.pyc' \
+#                  -czf litellm-vendor-<ver>.tgz -C <build-dir> v
+#                (mv the extracted tree to `litellm/` before install, or use
+#                prefix = v; the committed tarball top-level is `v`)
+#     4. place litellm-vendor-<ver>.tgz in ~/.cache/workstation/apps/,
+#        update version/archive/sha256 here (and the lock in source/ when
+#        the lock changed), rerun: bash modules/apps.sh litellm
+#   The tree is relocatable (uv venv; entry scripts survive path moves) —
+#   verified by extracting to a fresh path and booting the proxy.
+#
+#   Recovery anchors, initial declaration 2026-10-14 (all for 1.105.1):
+#     sdist sha256   f1a274db0b2bcc78… (see source lock header note)
+#     wheel sha256   f3d743c2d274c6537f7341213607c927c486676012a9d94412a8a8ccbe2f51f1
+#                    (litellm-1.105.1-cp310-abi3-manylinux_2_28_x86_64.whl)
+#     lock sha256    288e6404bac72f5b08e293e92a21fbc2834b6aeca1bef195d456f16f16d3e6ab
+#     vendor sha256  ce1940fd26aef1e25c90dcb25cc65ba4604d3609b6965ac493e64a993b396368
+#   Rollback: restore version/archive/sha256 to the anchor above; the
+#   archive stays in the cache.
+
+name = litellm
+title = LiteLLM AI Gateway
+version = 1.105.1
+binary = bin/litellm
+prefix = v
+archive = litellm-vendor-1.105.1.tgz
+sha256 = ce1940fd26aef1e25c90dcb25cc65ba4604d3609b6965ac493e64a993b396368
+source = https://pypi.org/project/litellm/1.105.1/
+desktop = false
+
+# Functional check: the vendored interpreter must import the proxy server
+# module (exercises the C extensions and the full dependency closure, not
+# just the launcher), and the CLI must report the declared version.
+# NOTE: values here are raw — declaration syntax adds no shell quoting
+# (every sibling declaration is unquoted), so shell expansion inside the
+# value must be parenthesized: $APP is the launcher symlink, its target
+# ends in /<version>/bin/litellm, and ${...} derives the sibling python.
+smoke = true
+smoke_cmd = "$(dirname "$(dirname "$(realpath "$APP")")")/bin/python" -c "import litellm.proxy.proxy_server" && "$APP" --version | grep -q -- "$VERSION"
