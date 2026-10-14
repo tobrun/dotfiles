@@ -1,8 +1,37 @@
 # Workstation dotfiles
 
-Declarations and code that build this workstation. Following
-`~/Documents/REPRODUCIBLE_WORKSTATIONS_IN_PRACTICE.md`: one repository declares the
+Declarations and code that build this workstation: one repository declares the
 environment; small modules apply it; observations live outside this repo.
+
+## Vision
+
+A reproducible workstation is a **maintained explanation of how your working
+environment is built**. The machine is an output of this repository, never an
+input: whatever makes the machine useful only counts as reproducible once it
+exists here as a reviewed declaration plus code that converges reality toward
+it. The ideas this repo is built on:
+
+- **One owner per kind of state.** Files, system packages, developer tools,
+  and container packaging each have exactly one owner with a reviewable
+  declaration. Duplicate owners mean `command -v` succeeds while the shell
+  runs an unintended version.
+- **Declarations, not observations.** A machine inventory is evidence, not
+  intent. Only curated content in this repo states what the workstation
+  should be; everything else — project source, browser sessions,
+  credentials, model weights — has other owners and stays out by design.
+- **Convergence over installation.** Every module is idempotent with a
+  read-only check mode, so re-applying the declarations repairs managed
+  state; "installed once" is not the goal.
+- **Keep the claim smaller than the evidence.** This repo aims to be
+  recoverable, convergent, and repeatable. Bit-for-bit reproducibility is a
+  different, more expensive claim — a Docker digest identifies an artifact,
+  it does not prove you can recreate it.
+- **Drift is a work queue, not a failure to hide.** An out-of-band change is
+  detected by `scripts/drift.sh` and resolved deliberately — fold it into the
+  declaration or revert it — so machine and repo never quietly disagree.
+- **Update deliberately, recover from a runbook.** Version bumps follow the
+  recipe recorded in the declaration and re-verify provenance; clean-machine
+  recovery is written down in `docs/runbooks/`, not reenacted from memory.
 
 ## Who owns what state
 

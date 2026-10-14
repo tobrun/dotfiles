@@ -4,8 +4,8 @@ Guidance for AI coding agents working in this repository.
 
 This repo is the **single source of truth for one workstation**: declarative
 layers plus the convergence code that applies them. The machine is an output
-of the repo, never the input. Design rationale lives in `README.md` and
-`~/Documents/REPRODUCIBLE_WORKSTATIONS_IN_PRACTICE.md`; this file is the
+of the repo, never the input. Design rationale lives in the **Vision** section
+of `README.md`; this file is the
 operating contract.
 
 ## The three facts
