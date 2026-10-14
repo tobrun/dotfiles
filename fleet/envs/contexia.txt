@@ -57,3 +57,11 @@ gateway_secret = global:localhost:GATEWAY_API_KEY:sbx-cs-fleet-gateway
 # Exchange convention: /srv/agent-exchange/<task> mounted read-write,
 # listed last (mount-order rule verified on 0.48.0).
 exchange = true
+# Host MCP brokers attached at create (sbx create --static-mcp <name>) or
+# onto a running sandbox (sbx mcp load <name> --sandbox <task>). The
+# registration is host state owned by the repo:
+#   sbx mcp add broker-git --command <repo>/fleet/brokers/git-push.py \
+#     --dir /srv/agent-sources/contexia
+# Contract, credential story, and boundary evidence: runbook
+# "Host MCP broker". Unregistering = sbx mcp rm broker-git --force.
+mcp = broker-git
