@@ -1,0 +1,35 @@
+# Profile: task environments for the Contexia knowledge-base app.
+# Baseline, verification chain, and network posture for sandboxes created
+# from /srv/agent-sources/contexia (clean source clone). Fleet defaults
+# (fleet/defaults.txt) apply unless overridden here.
+# Converged by hand per docs/runbooks/fleet-host.md until modules/fleet.sh
+# lands; that module must parse this format: `key = value`, one per line.
+name = contexia
+# Baseline commit of the source clone; bump by re-cloning and editing here.
+baseline = dad828035ed7f1a49b130d8d61920254200504ba
+# Verification chain for baseline and later acceptance, run inside the
+# sandbox at the clone path. The kit ships Node 22; the env setup fetches
+# Node 24 to ~/.local/node (see runbook task-001 evidence), hence the PATH
+# export. --store-dir keeps the pnpm store outside the clone: home and the
+# clone live on different filesystems, and pnpm's fallback project-local
+# store gets linted by biome and fails the chain. Integration tests
+# (Postgres 17 + pgvector via compose) and e2e (Playwright browsers) need
+# extra allow rules — deferred deliberately; unit scope is the gate.
+verify = export PATH=$HOME/.local/node/bin:$PATH && pnpm install --frozen-lockfile --store-dir "$HOME/.pnpm-store" && pnpm lint && pnpm typecheck && pnpm build && pnpm -r --if-present run test:unit
+# Per-sandbox network posture on top of the global deny-all, converged in
+# this order: deny first, then allow.
+#
+# The agent kit (opencode) provisions an UNEDITABLE allow rule covering
+# every major AI provider, GitHub, and Ubuntu archives; policy rm refuses
+# it ("recreated at sandbox create"). Measured 2026-10-14: explicit deny
+# rules outrank kit allows, so the fleet neutralizes that surface here.
+# Rationale: inference must only ever reach the Phase 3 gateway (localhost
+# resource), and GitHub goes through the Phase 6 host broker, never directly.
+deny = api.anthropic.com:443, claude.ai:443, console.anthropic.com:443, chatgpt.com:443, openai.com:443, api.openai.com:443, auth.openai.com:443, api.groq.com:443, api.x.ai:443, openrouter.ai:443, generativelanguage.googleapis.com:443, aiplatform.googleapis.com:443, vertexai.googleapis.com:443, oauth2.googleapis.com:443, api.githubcopilot.com:443, api.business.githubcopilot.com:443, api.enterprise.githubcopilot.com:443, api.individual.githubcopilot.com:443, copilot.github.com:443, github.com:443, api.github.com:443, codeload.github.com:443, raw.githubusercontent.com:443, **.githubusercontent.com:443
+# Allowed on evidence (sbx policy log shows every denial; growth stays
+# evidence-driven). Toolchain bootstrap rules retire when the Phase 5
+# template bakes Node 24 + pnpm.
+allow = registry.npmjs.org:443, nodejs.org:443
+# Exchange convention: /srv/agent-exchange/<task> mounted read-write,
+# listed last (mount-order rule verified on 0.48.0).
+exchange = true
