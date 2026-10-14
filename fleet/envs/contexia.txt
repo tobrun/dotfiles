@@ -7,15 +7,23 @@
 name = contexia
 # Baseline commit of the source clone; bump by re-cloning and editing here.
 baseline = dad828035ed7f1a49b130d8d61920254200504ba
+# Task environments are created FROM this template (sbx create --pull never
+# -t <template>), per fleet/templates/<template>.yaml publication records.
+# Toolchain (Node 24.21.0 + pnpm 10.15.1 at /opt/fleet/node, on PATH via
+# /etc/sandbox-persistent.sh), the reviewed agent config
+# ($OPENCODE_CONFIG=/opt/fleet/opencode/config.json), and a warm
+# ~/.pnpm-store arrive baked; see the runbook "Template bake" recipe.
+template = fleet-typescript:2026-10-14.2
 # Verification chain for baseline and later acceptance, run inside the
-# sandbox at the clone path. The kit ships Node 22; the env setup fetches
-# Node 24 to ~/.local/node (see runbook task-001 evidence), hence the PATH
-# export. --store-dir keeps the pnpm store outside the clone: home and the
-# clone live on different filesystems, and pnpm's fallback project-local
-# store gets linted by biome and fails the chain. Integration tests
-# (Postgres 17 + pgvector via compose) and e2e (Playwright browsers) need
-# extra allow rules — deferred deliberately; unit scope is the gate.
-verify = export PATH=$HOME/.local/node/bin:$PATH && pnpm install --frozen-lockfile --store-dir "$HOME/.pnpm-store" && pnpm lint && pnpm typecheck && pnpm build && pnpm -r --if-present run test:unit
+# sandbox at the clone path. No PATH setup needed on a template-built
+# sandbox (the persistent-env hook carries the toolchain; measured on a
+# fresh instance 2026-10-14). --store-dir keeps the pnpm store outside the
+# clone: home and the clone live on different filesystems, and pnpm's
+# fallback project-local store gets linted by biome and fails the chain.
+# Integration tests (Postgres 17 + pgvector via compose) and e2e
+# (Playwright browsers) need extra allow rules — deferred deliberately;
+# unit scope is the gate.
+verify = cd /srv/agent-sources/contexia && pnpm install --frozen-lockfile --store-dir "$HOME/.pnpm-store" && pnpm lint && pnpm typecheck && pnpm build && pnpm -r --if-present run test:unit
 # Per-sandbox network posture on top of the global deny-all, converged in
 # this order: deny first, then allow.
 #
@@ -27,19 +35,25 @@ verify = export PATH=$HOME/.local/node/bin:$PATH && pnpm install --frozen-lockfi
 # resource), and GitHub goes through the Phase 6 host broker, never directly.
 deny = api.anthropic.com:443, claude.ai:443, console.anthropic.com:443, chatgpt.com:443, openai.com:443, api.openai.com:443, auth.openai.com:443, api.groq.com:443, api.x.ai:443, openrouter.ai:443, generativelanguage.googleapis.com:443, aiplatform.googleapis.com:443, vertexai.googleapis.com:443, oauth2.googleapis.com:443, api.githubcopilot.com:443, api.business.githubcopilot.com:443, api.enterprise.githubcopilot.com:443, api.individual.githubcopilot.com:443, copilot.github.com:443, github.com:443, api.github.com:443, codeload.github.com:443, raw.githubusercontent.com:443, **.githubusercontent.com:443
 # Allowed on evidence (sbx policy log shows every denial; growth stays
-# evidence-driven). Toolchain bootstrap rules retire when the Phase 5
-# template bakes Node 24 + pnpm. localhost:4000 is the inference gateway:
-# sandbox requests to host.docker.internal:4000 are normalized by the
-# egress proxy to resource `localhost:4000` (measured 2026-10-14), and
-# first contact also raises a policy approval for that resource.
-allow = registry.npmjs.org:443, nodejs.org:443, localhost:4000
-# Gateway credential per sandbox (measured contract, runbook "Inference
-# gateway"): sbx secret set-custom --sandbox <task> --host localhost
-# --env GATEWAY_API_KEY --command "grep '^LITELLM_MASTER_KEY='
-# /home/nurbot/.config/litellm/gateway.env | cut -d= -f2". The sandbox
-# only ever sees the generated placeholder; the egress proxy substitutes
-# the real key in Authorization headers toward localhost.
-gateway_secret = custom:localhost:GATEWAY_API_KEY
+# evidence-driven). The Phase 5 template bake retired the toolchain
+# bootstrap rules: nodejs.org is measured 403 on a fresh template-built
+# sandbox whose toolchain works (2026-10-14). localhost:4000 is the
+# inference gateway: sandbox requests to host.docker.internal:4000 are
+# normalized by the egress proxy to resource `localhost:4000` (measured
+# 2026-10-14), and with the global gateway secret in place first contact
+# no longer raises a policy approval (measured 2026-10-14 on task-002).
+allow = registry.npmjs.org:443, localhost:4000
+# Gateway credential: ONE global custom secret with a FIXED placeholder,
+# measured 2026-10-14 (topology revision 9):
+#   sbx secret set-custom --host localhost --env GATEWAY_API_KEY \
+#     --placeholder sbx-cs-fleet-gateway --command "grep
+#     '^LITELLM_MASTER_KEY=' ~/.config/litellm/gateway.env | cut -d= -f2"
+# The placeholder — not a secret — is baked into the template's reviewed
+# agent config (fleet/opencode/opencode.json), so per-sandbox secret
+# registration and sbx exec -e injection are both retired: every sandbox,
+# exec or run session alike, carries it from creation. The egress proxy
+# substitutes the real key in Authorization headers toward localhost.
+gateway_secret = global:localhost:GATEWAY_API_KEY:sbx-cs-fleet-gateway
 # Exchange convention: /srv/agent-exchange/<task> mounted read-write,
 # listed last (mount-order rule verified on 0.48.0).
 exchange = true

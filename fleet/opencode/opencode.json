@@ -1,0 +1,50 @@
+{
+  // Fleet-wide agent config for opencode, baked into the task template
+  // (ch 12: "bake reviewed task instructions into the template").
+  // Reviewed input to fleet/templates publications — the ONLY supported
+  // home for this file; sandboxes never hand-edit it.
+  //
+  // Contract (measured 2026-02-14, runbook "Inference gateway"):
+  // - baseUrl host.docker.internal:4000 is the host gateway; the egress
+  //   proxy normalizes the policy resource to `localhost:4000`, so the
+  //   per-sandbox allow rule is written for `localhost:4000`.
+  // - Authorization carries the FIXED PLACEHOLDER of the global custom
+  //   secret `sbx-cs-fleet-gateway` (env GATEWAY_API_KEY); the proxy
+  //   substitutes the real key on the wire. The placeholder is not a
+  //   secret. Substitution fires on Authorization: Bearer <placeholder>
+  //   only — hence an explicit Authorization header instead of relying
+  //   on the SDK's x-api-key default.
+  // - enabled_providers locks the agent to the gateway: no bundled
+  //   provider can activate, so inference can only reach the host proxy.
+  // - The model id is the upstream server's id verbatim (the gateway
+  //   serves it unchanged); declared per machine in chezmoi data
+  //   (inferenceModel) — bump both together.
+  "$schema": "https://opencode.ai/config.json",
+  "enabled_providers": ["gateway"],
+  "model": "gateway/qwen38-flash-next",
+  "provider": {
+    "gateway": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Fleet inference gateway (host)",
+      "options": {
+        "baseURL": "http://host.docker.internal:4000/v1",
+        "headers": {
+          "Authorization": "Bearer sbx-cs-fleet-gateway"
+        }
+      },
+      "models": {
+        "qwen38-flash-next": {}
+      }
+    }
+  },
+  "mcp": {
+    "mcp-gateway": {
+      "type": "remote",
+      "url": "http://mcp-gateway.docker.internal/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer proxy-managed"
+      }
+    }
+  }
+}
