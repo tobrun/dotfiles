@@ -93,6 +93,53 @@ Smoke sandbox `phase1-smoke` (agent `shell`, no workspace, `--cpus 2
 | Raw `connect()` is **not** the boundary | `connect()` to `1.1.1.1:80`, `8.8.8.8:53`, tailnet `:22` all succeed (local egress interceptor completes the handshake) — but zero bytes flow: HTTP `GET` got an empty response, no sshd banner, no DNS answer. Verify boundaries at the **data** layer, never at the handshake; these direct-IP connects generate **no policy-log rows** (log covers named domains only) |
 
 
+## Topology revisions (2026-10-14)
+
+Recorded decisions that revise the original build sequence, several informed
+by a community practitioner setup shared that month (mechanisms absorbed;
+their names, org, paths and model aliases deliberately not adopted):
+
+1. **Gateway = LiteLLM proxy on the host** (declared later via the apps
+   layer, pinned) instead of a hand-built gateway. It supplies the book's
+   control-plane pieces off the shelf: per-task virtual keys with expiry and
+   model allowlists. Sandbox side: OpenAI-compatible provider at
+   `http://host.docker.internal:<port>/v1`; the network policy resource for
+   that route is `localhost:<port>`. Keys are injected with
+   `sbx secret set-custom` (host-keyed env placeholder, value in the OS
+   keyring) — the key never appears in create commands, shell history, or
+   sandbox config. Agent config pins `enabled_providers` to the proxy alone
+   and denies the agent edits to its own config files; explore/build
+   subagents get a cheaper model tier.
+2. **Artifact flow through clone mode**: `sbx create --clone` adds a
+   `sandbox-<name>` git remote to the *host* repository — the host extracts
+   committed work with `git fetch sandbox-<name>`; the sandbox keeps no push
+   credentials, so a failing `git push` is the designed boundary, not an
+   incident. Generated artifacts go to a dedicated rw **exchange directory**
+   mounted alongside the clone.
+3. **Bot git identity per sandbox**: identity is set inside each sandbox at
+   create time (`sbx exec … git config --global …`) with a dedicated fleet
+   bot name/email — overriding the host-identity seeding measured above.
+   Value is a parameter (`fleet/` declaration), not hardcoded in scripts.
+4. **Per-task declarations live in `fleet/`** (top-level): network
+   allow-list, read-only context dirs, exchange path, provider config per
+   task-environment profile. Global policy stays `deny-all` + per-sandbox
+   allow rules; curated global allow-lists are rejected as weaker.
+5. **Templates**: build from `docker/sandbox-templates:<agent>` bases, ship
+   via `docker save` + `sbx template load`, bump the tag on every change —
+   sbx caches template images by tag.
+6. **Deferred phase 6 — host MCP brokers**: credential-adjacent operations
+   (GitHub PR/CI, push of `agent/*` branches) run as host-side MCP servers
+   registered with `sbx mcp add`: tools and targets (repo, remote, base
+   branch) fixed at registration, arguments regex-validated, JSONL audit
+   log, bounded concurrency/timeouts. Until then, extraction is manual
+   `git fetch sandbox-<task>` on the host.
+
+Mount rules to **re-verify on 0.48.0** during Phase 2 (practitioner data
+from 0.42.1): never `:ro`-mount a parent of the clone root (sandbox fails to
+start); a rw mount sharing ancestry with `:ro` mounts stays writable only if
+listed after them; workspace mounts are frozen at creation; `--clone`
+refuses git worktrees.
+
 ## Tailscale administration path
 
 - Enable host SSH only with a recovery connection already open (enabling it
