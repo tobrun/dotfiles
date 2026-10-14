@@ -122,3 +122,11 @@ case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$P
 # mise developer toolchains (canonical declaration: toolchains/mise.toml in the
 # workstation repository; projected here by chezmoi as ~/.config/mise/config.toml)
 command -v mise >/dev/null 2>&1 && eval "$(mise activate bash)"
+
+# CUDA toolkit (declared in packages/apt/nvidia.txt; guarded so this file is
+# inert on machines/containers without the toolkit). /usr/local/cuda is the
+# version symlink maintained by the cuda-toolkit package.
+if [ -d /usr/local/cuda/bin ]; then
+  case ":$PATH:" in *":/usr/local/cuda/bin:"*) ;; *) export PATH="/usr/local/cuda/bin:$PATH" ;; esac
+  case ":$LD_LIBRARY_PATH:" in *":/usr/local/cuda/lib64:"*) ;; *) export LD_LIBRARY_PATH="/usr/local/cuda/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" ;; esac
+fi
