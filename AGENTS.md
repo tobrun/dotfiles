@@ -32,6 +32,7 @@ operating contract.
 | `home/` | chezmoi source tree, projected onto `$HOME` (naming: `dot_x` → `.x`) |
 | `toolchains/mise.toml` + `mise.lock` | Canonical developer toolchains |
 | `packages/apt/base.txt` | System package pins (`name=version`) |
+| `docs/runbooks/` | Incident recovery procedures + hardware-layer rules (e.g. `nvidia-gpu.md`) |
 | `packages/apps/*.txt` | App declarations (version, sha256, launcher, smoke test) |
 | `packages/desktop/gnome.txt` | GNOME settings baseline |
 | `docker/` | sandbox image assembly (`inputs.txt` pins, `build.sh`, `acceptance.sh`, `run.sh`) |
@@ -56,8 +57,8 @@ record source URL + fingerprint, and it must verify the repo's `InRelease`)
 and `packages/apt/repos/<name>.sources` (deb822, `Signed-By:` pointing at the
 fixed keyring path `/usr/share/keyrings/<name>-archive-keyring.gpg`). A group
 manifest then binds it with `repo = <name>` above the package lines — see
-`packages/apt/tailscale.txt`. The module converges keyring + sources before
-packages and covers them in `--check` mode.
+`packages/apt/tailscale.txt` and `packages/apt/nvidia.txt`. The module
+converges keyring + sources before packages and covers them in `--check` mode.
 
 **Per-user CLI/app** → new `packages/apps/<app>.txt`, never ad-hoc
 `npm i -g` or manual installs:

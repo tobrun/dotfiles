@@ -1,0 +1,31 @@
+# Group: NVIDIA GPU driver + CUDA toolkit (host-only; sandbox images have no
+# GPU and must never carry this group).
+# Not in the Ubuntu archive, so this group binds NVIDIA's official repository
+# declaration (repo = nvidia -> packages/apt/repos/nvidia.*).
+#
+# HARD RULE — never mix driver sources (this mix cost a graphical login
+# loop, see docs/runbooks/nvidia-gpu.md): every nvidia/cuda package on this
+# machine comes from NVIDIA's repo, never from Ubuntu's. Ubuntu's
+# nvidia-driver-595-open (or any archive driver) must never be installed;
+# `apt list --installed | grep -i nvidia` must show only NVIDIA-repo packages.
+# The nvidia-open metapackage Breaks/Replaces cuda-drivers, so the
+# NVIDIA-repo "cuda-drivers" metapackage must also stay uninstalled —
+# driver comes from nvidia-open, toolkit from cuda-toolkit.
+#
+# nvidia-open: NVIDIA's open-kernel-module driver metapackage (open modules
+# are the supported line for current datacenter/consumer GPUs).
+# cuda-toolkit: nvcc + headers + libs only; does NOT drag in drivers.
+# linux-headers-generic-hwe-26.04 + build-essential: dkms builds the module
+# against the running kernel; dkms only *recommends* a compiler and the apt
+# module installs --no-install-recommends, so both are declared explicitly.
+#
+# Versions follow the repo (apt-layer policy: presence, not pinning).
+# Update/verify recipe:
+#   sudo bash modules/apt.sh nvidia && sudo reboot
+#   nvidia-smi && nvcc --version   (toolkit lands in /usr/local/cuda-<ver>)
+# Full verification matrix and recovery: docs/runbooks/nvidia-gpu.md.
+repo = nvidia
+nvidia-open
+cuda-toolkit
+linux-headers-generic-hwe-26.04
+build-essential

@@ -1,0 +1,18 @@
+# Converged by modules/apt.sh to /etc/apt/sources.list.d/nvidia.sources.
+# NVIDIA's official CUDA repository for Ubuntu 26.04 (ubuntu2604), as
+# published at
+# https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2604/x86_64/
+# (converted from the one-line .list shipped by cuda-keyring_1.1-1_all.deb to
+# deb822). Flat repository, hence `Suites: /`. Packages are verified with
+# packages/apt/repos/nvidia.key.asc, dearmored to the Signed-By path.
+# This declaration deliberately does NOT install NVIDIA's cuda-keyring deb:
+# modules/apt.sh owns keyring + sources here, so Ubuntu's and NVIDIA's driver
+# packaging never mix (see docs/runbooks/nvidia-gpu.md).
+# Distro upgrade: NVIDIA publishes a per-release directory (ubuntu2404,
+# ubuntu2604, ...). Update the URIs directory for the new release, confirm the
+# key still signs that directory's InRelease, then rerun
+# `bash modules/apt.sh nvidia` as root.
+Types: deb
+URIs: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2604/x86_64/
+Suites: /
+Signed-By: /usr/share/keyrings/nvidia-archive-keyring.gpg

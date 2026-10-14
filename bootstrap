@@ -52,7 +52,7 @@ git_email=${WORKSTATION_GIT_EMAIL:-$(git config --global user.email 2>/dev/null 
 # Phase 1: Ubuntu packages (root-owned work stays in the module).
 if [[ -t 0 ]]; then sudo -v; else printf 'bootstrap: noninteractive; sudo may prompt or fail\n'; fi
 run_phase apt sudo env WORKSTATION_APT_SNAPSHOT= \
-  bash "$repo_root/modules/apt.sh" base docker tailscale
+  bash "$repo_root/modules/apt.sh" base docker tailscale nvidia
 
 # Phase 2: declared per-user applications (artifact cache must be populated).
 apps=()
