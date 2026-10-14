@@ -1,0 +1,35 @@
+# Template publication record (book ch 12.4). One file per published
+# template version; the active selection is fleet/envs/<env>.txt `template`.
+# A digest identifies the exported artifact; the evidence explains what it
+# was checked to do; neither replaces the recipe (runbook "Template bake").
+template_id: fleet-typescript-20261014-2
+local_tag: fleet-typescript:2026-10-14.2
+artifact: /srv/agent-templates/fleet-typescript-2026-10-14.2.tar
+artifact_sha256: c1e303fb75e0208954f8468938e3b837bb63560648ad0fe87fee670a26d77140
+artifact_size_bytes: 1812230656
+recipe_commit: d79ea49
+sbx_version: v0.48.0
+agent_version: opencode 1.18.32   # measured inside the fresh instance
+
+inputs:
+  base_image: docker.io/docker/sandbox-templates:opencode-docker   # image id ef636291701f
+  node: 24.21.0           # nodejs.org .tar.gz dist, SHA256SUMS-verified in-sandbox
+  pnpm: 10.15.1           # via the baked npm, NPM_CONFIG_PREFIX=/opt/fleet/node
+  agent_config: fleet/opencode/opencode.json
+  baseline_commit: dad828035ed7f1a49b130d8d61920254200504ba
+  dependency_lock_digest: 8f4082befd6be5694ac3341a4ebf877372e3ff74acb7cd93d5a3f268f9b71811  # pnpm-lock.yaml
+
+evidence:
+  baseline_test: passed            # full verify chain green on fresh instance (2026-10-14, 1m49s)
+  fresh_instance: passed           # task-002 created from this tag; sentinels per capture_inventory
+  credential_canary_absent: n/a    # no credential ever entered the baker; the baked
+                                   # placeholder is not a secret (ch 12.3 forbids
+                                   # putting real secrets in a baker to test this)
+  boundary_probes: passed          # nodejs.org 403 with working baked toolchain; gateway 200
+                                   # via placeholder; agent tool loop green end-to-end;
+                                   # extraction commit reached host with declared identity
+  capture_inventory: recorded      # runbook "Template bake" sentinel table
+
+capture_verified_property: reproducible from declared inputs by the runbook recipe (not byte-identical)
+promotion: active                  # accepted via task-002 fresh-instance acceptance 2026-10-14
+previous_good: none

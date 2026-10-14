@@ -117,6 +117,12 @@ VM state incl. toolchain survives). Measured:
 | Kit toolchain gap | kit ships Node 22 (`corepack` cannot symlink into `/usr/bin` as agent); repo engines `>=24` + `engine-strict=true` → Node 24 tarball fetched to `~/.local/node` at env setup (`nodejs.org` allow rule; **no `xz` in the kit** — must take the `.tar.gz` dist). Phase 5 template retires this rule |
 | pnpm store is filesystem-scoped | home (ext4) and clone (its own ext4 device) differ → pnpm silently fell back to a project-local `.pnpm-store/` **inside the clone**, which biome then linted (582 phantom errors). Fix in the profile's verify chain: `--store-dir ~/.pnpm-store` |
 
+**Retired 2026-10-14**: task-001 (kit-bootstrap toolchain, per-sandbox
+generated-placeholder secret) was superseded by template-built task-002
+(see "Template bake") and removed with `sbx rm --force`; everything it
+proved is restated on the template instance, and the toolchain rows above
+are history — the bootstrap they describe now happens once, in a baker.
+
 ## Topology revisions (2026-10-14)
 
 Recorded decisions that revise the original build sequence, several informed
@@ -173,6 +179,20 @@ their names, org, paths and model aliases deliberately not adopted):
  8. **Preview path revised from ch 14.4**: no `tailscale serve` route;
     preview ports publish directly on the tailscale0 address via
     `sbx ports`, see "Operator previews".
+ 9. **Template bake live (ch 12), measured 2026-10-14**: task environments
+    are created from `fleet-typescript:2026-10-14.2` (publication records
+    in `fleet/templates/`); the toolchain lives at `/opt/fleet/node` and
+    reaches every shell through the kit's own
+    `BASH_ENV=/etc/sandbox-persistent.sh` hook. The agent config cannot be
+    baked at `~/.config/opencode/opencode.json` — the kit re-provisions
+    that file at create (measured: fresh instance showed the kit's own
+    271-byte file, the baked 1985-byte file gone) — so the template ships
+    `/opt/fleet/opencode/config.json` and exports `OPENCODE_CONFIG`
+    through the same hook. `set-custom` accepts `--placeholder` (fixed
+    value) and defaults to GLOBAL scope, so the gateway credential is one
+    fleet-wide secret, `sbx-cs-fleet-gateway`, whose placeholder is baked
+    into the reviewed config; per-sandbox secret registration, `sbx exec
+    -e` injection, and the first-contact gateway approval are all retired.
 
 Mount rules from the practitioner data (0.42.1): never `:ro`-mount a parent
 of the clone root (sandbox fails to start); a rw mount sharing ancestry with
@@ -197,45 +217,57 @@ Operating contract (measured 2026-10-14):
 - Serves `127.0.0.1:4000` only. Sandboxes reach it at
   `host.docker.internal:4000`; the egress proxy **normalizes that to
   policy resource `localhost:4000`** — allow rules on
-  `host.docker.internal` do not match. First contact also raises a
-  `policy approval` for `localhost:4000`; respond once per sandbox
-  (`sbx policy approval ls` / `respond <id> --option allow`).
-- Credentials: `sbx secret set-custom --sandbox <task> --host localhost
-  --env GATEWAY_API_KEY --command "grep '^LITELLM_MASTER_KEY=' ~/.config/
-  litellm/gateway.env | cut -d= -f2"` (exact form in
-  `fleet/envs/contexia.txt`). The sandbox only ever sees the generated
-  **placeholder** — non-secret, safe in commands; the proxy rewrites the
-  `Authorization` header toward `localhost` with the real master key,
-  which never enters the sandbox.
+  `host.docker.internal` do not match. With the fleet secret registered
+  (below), first contact no longer raises a policy approval (measured
+  2026-10-14 on task-002; approvals still guard resources without one).
+- Credentials: ONE **global** custom secret with a **fixed placeholder**
+  (revision 9): `sbx secret set-custom --host localhost --env
+  GATEWAY_API_KEY --placeholder sbx-cs-fleet-gateway --command "grep
+  '^LITELLM_MASTER_KEY=' ~/.config/litellm/gateway.env | cut -d= -f2"`.
+  The sandbox only ever sees the **placeholder** — non-secret, safe in
+  commands and committed configs; the proxy rewrites the `Authorization`
+  header toward `localhost` with the real master key, which never enters
+  the sandbox.
 - Placeholder → real substitution is keyed on the placeholder value in
   `Authorization: Bearer …`. The openai-compatible SDK defaults to
-  `x-api-key`, which the proxy does not rewrite — the in-sandbox opencode
-  config therefore pins `options.headers.Authorization` explicitly.
-  Env injection: custom-secret env vars reach agent (`sbx run`) sessions;
-  `sbx exec` sessions need `-e GATEWAY_API_KEY=<placeholder>`.
+  `x-api-key`, which the proxy does not rewrite — the fleet opencode
+  config therefore pins `options.headers.Authorization` explicitly. The
+  baked config carries the literal placeholder, so the old
+  `sbx exec -e GATEWAY_API_KEY=<placeholder>` injection is retired;
+  `sbx run` sessions additionally receive the env var from the secret.
 - DB-less by necessity: LiteLLM virtual keys require Prisma, whose engine
   binary is fetched at runtime — violates the apps-layer provenance rule.
   Consequences: `/v1/models` answers "No connected db." (harmless; agents
-  declare models statically), and **revocation = rotate
-  `LITELLM_MASTER_KEY` in gateway.env + `systemctl --user restart
-  litellm`** (invalidates all sandboxes at once — acceptable while the
-  fleet is one host's own sandboxes; revisit with the ch 15 ledger db).
-- Agent side (task-001): `~/.config/opencode/opencode.json` declares the
-  provider with `baseURL http://host.docker.internal:4000/v1`, pins
-  `model` to `gateway/<server-model-id>`, and locks
-  `enabled_providers: ["gateway"]` so no other provider can activate.
+  declare models statically; over the gateway the endpoint has since
+  returned 500 — equally harmless, agents never call it), and
+  **revocation = rotate `LITELLM_MASTER_KEY` in gateway.env +
+  `systemctl --user restart litellm`** (invalidates all sandboxes at once
+  — acceptable while the fleet is one host's own sandboxes; revisit with
+  the ch 15 ledger db).
+- Agent side: the reviewed config is `fleet/opencode/opencode.json`,
+  baked to `/opt/fleet/opencode/config.json` and selected via
+  `OPENCODE_CONFIG` (revision 9 — the kit re-provisions
+  `~/.config/opencode/opencode.json` at create, so baking there is
+  futile). It declares the provider with `baseURL
+  `http://host.docker.internal:4000/v1`, pins `model` to
+  `gateway/<server-model-id>`, and locks `enabled_providers:
+  ["gateway"]` (measured: `opencode models` lists exactly one model on a
+  fresh instance). File is root-owned 644 in the image: an in-sandbox
+  agent's tamper attempt gets Permission denied; note the sandbox agent
+  holds sudo, so this stops casual self-edits — what no agent can escape
+  is the host-side network policy and the key that never enters the VM.
   Kit's `OPENAI_API_KEY=proxy-managed` is owned by the kit — never
   override it; a custom secret on that env name is shadowed (measured).
 - Acceptance (ch 10.3 tool loop): **passed 2026-10-14 from inside
   task-001** — streamed `opencode run` task reasoned, called bash to
   locate a file, wrote `GATEWAY_TEST.md`, read it back, reported
   correctly; every inference hop traversed proxy → gateway → upstream.
-  Workspace restored clean afterwards (`git status` empty).
-- Follow-ups: deny agent self-edit of its own config (no filesystem
-  policy verb in 0.48.0's `policy allow`; only `network` — investigate
-  mounts or template re-bake); inert duplicate secret on env
-  `OPENAI_API_KEY` from an early probe (custom secrets have no `rm`
-  path in 0.48.0; same credential + host, no privilege difference).
+  **Re-passed 2026-10-14 on template-built task-002** with the baked
+  config alone (`opencode run` wrote and re-read `GATEWAY_LOOP.md`),
+  proving nothing per-sandbox is needed anymore.
+- Follow-ups: deny agent self-edit of its own config beyond file
+  ownership (no filesystem policy verb in 0.48.0's `policy allow`; only
+  `network` — investigate mounts or template re-bake).
 
 ## Operator previews (sbx ports on the tailnet)
 
@@ -280,6 +312,80 @@ Contract per preview:
 - Previews are generated output (ch 14.5): disposable data only; cookies
   are not port-scoped, so isolation-sensitive sessions need distinct
   hostnames, not just ports.
+
+## Template bake (fleet-typescript)
+
+Book ch 12, live 2026-10-14. Active publication:
+`fleet/templates/fleet-typescript-2026-10-14.2.yaml` (identity matches
+`template` in `fleet/envs/contexia.txt`). A template is never saved from a
+completed task — only from a dedicated baker whose only inputs are the
+declared ones below.
+
+Recipe (all steps measured; re-verify anything that drifts):
+
+1. `sbx create --name baker-ts --clone --skills off --cpus 4 --memory 8g
+   opencode /srv/agent-sources/contexia` (baker needs no exchange mount).
+2. Policy: the profile `deny` list, plus temporary allows
+   `registry.npmjs.org:443, nodejs.org:443` (toolchain fetch only).
+3. Toolchain (the sandbox agent has passwordless sudo **inside the VM** —
+   that is how system paths become writable; it grants nothing on the
+   host): fetch `node-v<ver>-linux-x64.tar.gz` (**no `xz` in the kit** →
+   must be `.tar.gz`) + `SHASUMS256.txt` from nodejs.org, verify with
+   `sha256sum -c`, unpack to `/opt/fleet/node`; then
+   `NPM_CONFIG_PREFIX=/opt/fleet/node npm install -g pnpm@<ver>` — without
+   the override npm lands pnpm in the kit's `/usr/local/share/npm-global`
+   (measured).
+4. Hook: append `export PATH=/opt/fleet/node/bin:$PATH` and
+   `export OPENCODE_CONFIG=/opt/fleet/opencode/config.json` to
+   `/etc/sandbox-persistent.sh`. The kit exports
+   `BASH_ENV=/etc/sandbox-persistent.sh`, so **every** shell — `sbx exec`,
+   agent tool shells, login shells — picks both up (measured: fresh `sbx
+   exec` resolves node/pnpm with zero per-session setup).
+5. Agent config: pipe `fleet/opencode/opencode.json` into
+   `/opt/fleet/opencode/config.json` via `sudo tee` (leaves it
+   root-owned 644 — agent tamper attempts get Permission denied,
+   measured). Baking to `~/.config/opencode/opencode.json` does NOT work:
+   the kit re-provisions that file at every create (revision 9).
+6. Sentinels (12.3 markers, see inventory below), then the profile
+   `verify` chain must go green in the baker.
+7. Prune task residue: `git clean -xdff` the clone, remove sentinels that
+   name tasks, stop background writers, `sbx stop baker-ts`.
+   **`template save` on a running sandbox demands a `--force` flag that
+   does not exist** (0.48.0 bug; `yes |` doesn't satisfy the TTY gate) —
+   a stopped sandbox saves without prompting.
+8. `sbx template save baker-ts fleet-typescript:<tag> --output
+   /srv/agent-templates/fleet-typescript-<tag>.tar`; record sha256 + size
+   in a `fleet/templates/<tag>.yaml` publication record; `sha256sum`
+   honestly, never a borrowed number.
+9. Accept on a fresh instance, not in the baker: `sbx create --name <task>
+   ... --pull never -t fleet-typescript:<tag> opencode <clone> <exchange>`,
+   converge profile rules **without** the toolchain allows, run the full
+   verify chain + boundary probes + the gateway tool loop.
+10. Bump the tag on every rebuild (caching is by tag); retire bakers and
+    superseded tags/tars with `sbx rm --force` / `sbx template rm --force`.
+
+Capture inventory (sentinels placed in the baker, inspected on a fresh
+instance — what capture includes is measured, not assumed):
+
+| Location | Survives capture | Note |
+| --- | --- | --- |
+| `/opt/fleet/node` (toolchain) | yes | sentinel content intact |
+| `~/.cache` (download cache) | yes | |
+| `~/.local/share/opencode` (kit storage) | yes | |
+| `~/.pnpm-store` (warm store) | yes | 583-package fresh install + full chain: 1m49s |
+| `/etc/sandbox-persistent.sh` hook | yes | both exports present |
+| `/var/lib/docker` (VM docker store) | **no** | images pulled in-sandbox do not travel |
+| task clone contents | n/a | reverted clean pre-save; fresh instances get a fresh clone — warm node_modules can never travel (mount) |
+| `~/.config/opencode/opencode.json` | overwritten | kit re-provisions at create → `OPENCODE_CONFIG` mechanism |
+
+Fresh-instance acceptance (task-002 from `2026-10-14.2`, 2026-10-14):
+verify chain green 10/10 packages; `nodejs.org` probe **403** with the
+baked toolchain fully working (the rule is genuinely retired); gateway
+chat **200** via the baked placeholder with **no** first-contact approval;
+`opencode models` lists exactly `gateway/qwen38-flash-next`; agent tool
+loop wrote/re-read `GATEWAY_LOOP.md`; extraction probe `59b2f136` reached
+the host clone with the declared identity (probe refs removed both sides,
+clones clean).
 
 ## Tailscale administration path
 
