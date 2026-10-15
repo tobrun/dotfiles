@@ -90,7 +90,18 @@ run_phase toolchains apply_toolchains
 
 # Phase 6: git safety hooks — point this clone at the committed hook set
 # (scripts/git-hooks/pre-commit runs the leak scanner on staged content).
-run_phase hooks git -C "$repo_root" config core.hooksPath scripts/git-hooks
+# The pointer lives in this clone's own git config, never the global one.
+converge_hooks() {
+  local want=scripts/git-hooks have
+  have=$(git -C "$repo_root" config --get core.hooksPath 2>/dev/null || true)
+  if [[ "$have" == "$want" ]]; then
+    printf 'hooks: already converged (core.hooksPath = %s)\n' "$want"
+  else
+    git -C "$repo_root" config core.hooksPath "$want"
+    printf 'hooks: core.hooksPath = %s\n' "$want"
+  fi
+}
+run_phase hooks converge_hooks
 
 if ((${#failed_phases[@]} > 0)); then
   printf 'bootstrap: failed phases: %s\n' "${failed_phases[*]}" >&2

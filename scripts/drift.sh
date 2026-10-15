@@ -79,10 +79,23 @@ else
 fi
 
 # Layer: git hooks — the leak scanner (scripts/git-hooks) must own this
-# clone's hooks; core.hooksPath is the pointer, content is checked by
-# the hook itself at commit time.
+# clone's hooks. The clone is located the way git locates it, via
+# --git-common-dir (one config, one hook lineage per clone); the pointer is
+# read as the effective core.hooksPath, exactly as git reads it, and a
+# relative value resolves against the worktree root just like git resolves
+# it. Hook content itself is checked by the hook at commit time.
 run_check hooks bash -c \
-  '[[ "$(git config --get core.hooksPath 2>/dev/null || true)" == scripts/git-hooks ]]'
+  'common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) ||
+     { echo "not a git clone — cannot locate its config to check hooks"; exit 1; }
+   hp=$(git config --get core.hooksPath 2>/dev/null) ||
+     { echo "core.hooksPath unset in $common/config — run ./bootstrap"; exit 1; }
+   root=$(git rev-parse --show-toplevel)
+   [[ $hp = /* ]] || hp="$root/$hp"
+   if [[ "$(realpath -m -- "$hp")" != "$(realpath -m -- "$root/scripts/git-hooks")" ]] ||
+      [[ ! -x "$hp/pre-commit" ]]; then
+     echo "core.hooksPath resolves to $hp — expected this clone at scripts/git-hooks with an executable pre-commit"
+     exit 1
+   fi'
 
 {
   printf '# drift report %s — %s\n' "$(date -u +%FT%TZ)" "$(hostname)"
