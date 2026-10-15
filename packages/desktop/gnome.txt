@@ -15,7 +15,7 @@ org.gnome.desktop.interface clock-show-weekday = false
 org.gnome.desktop.interface enable-animations = true
 org.gnome.desktop.peripherals.touchpad natural-scroll = true
 org.gnome.desktop.peripherals.touchpad tap-to-click = true
-org.gnome.shell favorite-apps = ['org.gnome.Nautilus.desktop', 'snap-store_snap-store.desktop', 'code.desktop', 'chromium.desktop']
+org.gnome.shell favorite-apps = ['org.gnome.Nautilus.desktop', 'snap-store_snap-store.desktop', 'code.desktop', 'chromium.desktop', 'com.mitchellh.ghostty.desktop']
 org.gnome.settings-daemon.plugins.power sleep-inactive-ac-type = 'nothing'
 org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type = 'suspend'
 # Dash-to-dock layout (adopted from machine 2026-10-14; always-center-icons

@@ -5,3 +5,7 @@ git
 
 # Archive handling used by the apps module
 unzip
+
+# Terminal emulator (ghostty.org). In Ubuntu 26.04 universe; version follows
+# the repo (apt-layer policy: presence, not pinning).
+ghostty
