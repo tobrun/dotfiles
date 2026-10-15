@@ -36,6 +36,15 @@
 #     2. install: uv venv --seed -p 3.13 v
 #                UV_NO_CACHE=1 uv pip install --python v/bin/python \
 #                  --no-cache -r litellm-<ver>.lock.txt
+#     2b. de-absolutize: the venv is NOT relocatable — every console script
+#        in v/bin embeds the build-dir interpreter path in its shebang, and
+#        the activate scripts embed it as VIRTUAL_ENV. Rewrite build refs to
+#        the final install path BEFORE packing:
+#          grep -rl "<build-dir>/v" v/bin | xargs sed -i \
+#            's|<build-dir>/v|'"$HOME"'/.local/apps/litellm/<ver>|g'
+#        (bin/python is a symlink to the mise python; the venv only needs
+#        that symlink to resolve — the baked path is the version dir, which
+#        matches apps.sh's install location exactly.)
 #     3. pack:   tar --sort=name --mtime='UTC <date>' --owner=0 --group=0 \
 #                  --numeric-owner --exclude='__pycache__' --exclude='*.pyc' \
 #                  -czf litellm-vendor-<ver>.tgz -C <build-dir> v
@@ -44,8 +53,11 @@
 #     4. place litellm-vendor-<ver>.tgz in ~/.cache/workstation/apps/,
 #        update version/archive/sha256 here (and the lock in source/ when
 #        the lock changed), rerun: bash modules/apps.sh litellm
-#   The tree is relocatable (uv venv; entry scripts survive path moves) —
-#   verified by extracting to a fresh path and booting the proxy.
+#   The tree is NOT relocatable in the interpreter sense: console-script
+#   shebangs are absolute (see step 2b). It survived the initial 2026-10-14
+#   install only because the build dir (/tmp/opencode/ltx) still existed
+#   when the launcher ran; when /tmp was cleared the launcher died with
+#   ENOENT (systemd 203/EXEC) — fixed and re-anchored 2026-10-15.
 #
 #   Recovery anchors, initial declaration 2026-10-14 (all for 1.105.1):
 #     sdist sha256   f1a274db0b2bcc78… (see source lock header note)
@@ -53,7 +65,12 @@
 #                    (litellm-1.105.1-cp310-abi3-manylinux_2_28_x86_64.whl)
 #     lock sha256    288e6404bac72f5b08e293e92a21fbc2834b6aeca1bef195d456f16f16d3e6ab
 #     vendor sha256  ce1940fd26aef1e25c90dcb25cc65ba4604d3609b6965ac493e64a993b396368
-#   Rollback: restore version/archive/sha256 to the anchor above; the
+#                    (superseded: that tarball's scripts point at the
+#                    transitory build dir — do not reinstall from it)
+#   Re-anchored 2026-10-15 after the step-2b shebang rewrite (same lock,
+#   same code; only v/bin paths differ):
+#     vendor sha256  c01a4c29ec4cb376ca84d66949b5997d0eb7e441a122e2a0283c0dde4287aa2a
+#   Rollback: restore version/archive/sha256 to the anchors above; the
 #   archive stays in the cache.
 
 name = litellm
@@ -62,7 +79,7 @@ version = 1.105.1
 binary = bin/litellm
 prefix = v
 archive = litellm-vendor-1.105.1.tgz
-sha256 = ce1940fd26aef1e25c90dcb25cc65ba4604d3609b6965ac493e64a993b396368
+sha256 = c01a4c29ec4cb376ca84d66949b5997d0eb7e441a122e2a0283c0dde4287aa2a
 source = https://pypi.org/project/litellm/1.105.1/
 desktop = false
 
