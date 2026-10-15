@@ -78,6 +78,12 @@ else
     'cd "$HOME" && mise install --locked --dry-run-code'
 fi
 
+# Layer: git hooks — the leak scanner (scripts/git-hooks) must own this
+# clone's hooks; core.hooksPath is the pointer, content is checked by
+# the hook itself at commit time.
+run_check hooks bash -c \
+  '[[ "$(git config --get core.hooksPath 2>/dev/null || true)" == scripts/git-hooks ]]'
+
 {
   printf '# drift report %s — %s\n' "$(date -u +%FT%TZ)" "$(hostname)"
   printf '%s\n' "${report[@]}"

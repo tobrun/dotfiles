@@ -88,6 +88,10 @@ apply_toolchains() {
 }
 run_phase toolchains apply_toolchains
 
+# Phase 6: git safety hooks — point this clone at the committed hook set
+# (scripts/git-hooks/pre-commit runs the leak scanner on staged content).
+run_phase hooks git -C "$repo_root" config core.hooksPath scripts/git-hooks
+
 if ((${#failed_phases[@]} > 0)); then
   printf 'bootstrap: failed phases: %s\n' "${failed_phases[*]}" >&2
   exit 1

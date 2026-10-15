@@ -87,9 +87,14 @@ curl -fsSL https://mise.run | MISE_VERSION=v2026.10.8 sh          # mise
 ## Applying the declarations
 
 ```bash
-./bootstrap            # apt → apps → dotfiles → desktop → toolchains
+./bootstrap            # apt → apps → dotfiles → desktop → toolchains → hooks
 ./scripts/drift.sh     # read-only: does reality still match the declarations?
 ```
+
+Every commit passes a leak gate (`scripts/secret-scan.sh --staged`, wired as
+a `pre-commit` hook by bootstrap): no credentials, no operator identity, no
+project references — the repo describes programs and installable
+environments only. Audit the whole tree with `./scripts/secret-scan.sh --all`.
 
 `scripts/drift.sh` runs a `workstation-drift.timer` daily at 06:30 (systemd user
 timer, installed via chezmoi; `systemctl --user list-timers` to inspect, reports

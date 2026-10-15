@@ -38,6 +38,8 @@ operating contract.
 | `fleet/opencode/` | Reviewed agent config baked into templates via `OPENCODE_CONFIG` |
 | `fleet/templates/` | Template publication records (tag, digest, recipe commit) |
 | `fleet/brokers/` | Host-side MCP brokers (`sbx mcp add --command`); contract + evidence in the fleet-host runbook |
+| `scripts/secret-scan.sh` | Read-only leak gate: credentials, operator identity, project refs (`--staged` / `--all`) |
+| `scripts/git-hooks/` | Committed hook set (`pre-commit` runs the leak scanner); wired via `core.hooksPath` |
 | `packages/apt/base.txt` | System package pins (`name=version`) |
 | `docs/runbooks/` | Incident recovery procedures + hardware-layer rules (e.g. `nvidia-gpu.md`) |
 | `packages/apps/*.txt` | App declarations (version, sha256, launcher, smoke test) |
@@ -96,6 +98,18 @@ converges keyring + sources before packages and covers them in `--check` mode.
 
 **Desktop setting** → edit `packages/desktop/gnome.txt`, converge with
 `bash modules/desktop.sh`.
+
+**Leak gate** → `scripts/git-hooks/pre-commit` runs `scripts/secret-scan.sh
+--staged` on every commit: credentials (token shapes, private keys,
+credential assignments), operator identity (account name, git name/email,
+remote paths — all derived at scan time), and project references (`~/ws/`
+checkouts, `owner/repo` paths). The repo describes programs and installable
+environments only. The gate blocks on **added lines**, so pre-existing
+content never blocks an unrelated commit; audit the whole tree with
+`scripts/secret-scan.sh --all`. Wire the hook with
+`git config core.hooksPath scripts/git-hooks` (done by `./bootstrap`,
+verified by `drift.sh`); reviewed exceptions live in `ALLOW`/`EXCL` in the
+script header and must say why the line is safe.
 
 **Developer tool** → `mise use -g <tool>@<version>` (updates both
 `toolchains/mise.toml` and `mise.lock`); commit both files.

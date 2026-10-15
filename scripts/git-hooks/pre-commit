@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# pre-commit — block leaks before they enter history. Runs the repo-owned
+# scanner over staged additions only, so pre-existing content never
+# blocks an unrelated commit. Active once core.hooksPath is wired to this
+# directory (converged by ./bootstrap, verified by scripts/drift.sh).
+# Emergency bypass: git commit --no-verify — the next drift run will
+# still show the leak if it was committed.
+set -Eeuo pipefail
+exec bash "$(git rev-parse --show-toplevel)/scripts/secret-scan.sh" --staged
