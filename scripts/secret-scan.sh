@@ -103,11 +103,17 @@ ALLOW['*']='sbx-cs-fleet-gateway'
 # git@github.com is the ssh transport prefix, not a person; documentation
 # addresses use reserved domains.
 ALLOW['email-address']='git@github\.com|@(example\.[a-z]{2,4}|noreply\.[A-Za-z0-9.-]+|localhost)'
-# The policy documents themselves may name the excluded-state location.
-EXCL['project-checkout']='^(AGENTS|README)\.md$'
+# The policy documents themselves may name the excluded-state location;
+# the nvidia runbook's rebuild steps keep their self-checkout reference
+# (reviewed 2026-10-15: it names this repo, no project).
+EXCL['project-checkout']='^(AGENTS|README)\.md$|^docs/runbooks/nvidia-gpu\.md$'
 # Vendor keyring headers must record the publisher UID (AGENTS.md vendor-repo
 # recipe); those addresses belong to the vendor, not the operator.
-EXCL['email-address']='^packages/apt/repos/.*\.key\.asc$'
+# The fleet git identity in fleet/defaults.txt is a DECLARATION (file header:
+# sandbox commits carry it deliberately), reviewed and kept 2026-10-15.
+EXCL['operator-name']='^fleet/defaults\.txt$'
+EXCL['operator-email']='^fleet/defaults\.txt$'
+EXCL['email-address']='^packages/apt/repos/.*\.key\.asc$|^fleet/defaults\.txt$'
 EXCL['*']='^scripts/(secret-scan\.sh|git-hooks/)'
 
 # --- candidate stream: "file<TAB>line<TAB>text" ---
