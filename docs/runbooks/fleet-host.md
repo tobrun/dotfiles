@@ -4,21 +4,21 @@ Host-only layer. The package half is declared in `packages/apt/sbx.txt`
 (repo bound via `packages/apt/repos/docker.*`); this runbook owns the host
 state the package cannot carry: KVM access, service directories, the `sbx`
 lockdown, the Tailscale administration path, and the memory/disk budget.
-Design rationale lives in `~/ws/books/REMOTE_CODING_AGENTS_IN_PRACTICE.md`
-(ch 4–5); this file is the operator contract for **this** machine.
+Design rationale lives in the reference book (ch 4–5); this file is the
+operator contract for **this** machine.
 
 ## Machine facts (verified 2026-10-14)
 
 | Item | Value | Consequence |
 | --- | --- | --- |
 | Release | Ubuntu 26.04.1 LTS (resolute), x86_64 | supported by `docker-sbx` |
-| KVM | `/dev/kvm` group `kvm` (nurbot in `/etc/group` since 2026-10-14) + logind/uaccess ACL `user:nurbot:rw-` | two access paths: ACL for the active seat session, group from the next login |
+| KVM | `/dev/kvm` group `kvm` (fleet account added 2026-10-14) + logind/uaccess ACL `user:<fleet-account>:rw-` | two access paths: ACL for the active seat session, group from the next login |
 | RAM | 60 GiB (+7 GiB swap) | concurrency target is **3 tasks**, not the book's 10 |
 | GPU | RTX 4090, 24 GiB, idle | **unallocated spare** — inference runs on a remote server (deviation from the book's running example) |
 | Disk | 621 GiB root, ~544 GiB free | admission floor below |
 | Engine | Ubuntu-archive `docker.io` 29.1.3 (group `docker`) | coexists; `sbx` does not need it and the docker-ce suite stays uninstalled |
 | Tailscale | enrolled 2026-10-14 (`desktop-1`, `100.113.6.60`) | admin path below; host SSH still off |
-| Fleet account | `nurbot` (desktop account; book ch 3.3 accepted trade-off) | everything below runs as `nurbot` |
+| Fleet account | the desktop account (book ch 3.3 accepted trade-off); resolve the name live with `whoami` | everything below runs as the fleet account |
 
 ## Memory budget (admission policy until measured otherwise)
 
@@ -41,9 +41,11 @@ reserve); the 80 %-use mark is only a notification threshold.
 **Done 2026-10-14** — all five steps converged; kept here for rebuilds.
 
 ```bash
-sudo usermod -aG kvm nurbot                     # KVM access (re-login after)
+FLEET_ACCOUNT=$(whoami)                         # this runbook runs as the fleet account
+sudo usermod -aG kvm "$FLEET_ACCOUNT"           # KVM access (re-login after)
 sudo mkdir -p /srv/agent-sources /srv/agent-templates /srv/models
-sudo chown nurbot:nurbot /srv/agent-sources /srv/agent-templates /srv/models
+sudo chown "$FLEET_ACCOUNT:$FLEET_ACCOUNT" \
+  /srv/agent-sources /srv/agent-templates /srv/models
 sudo bash modules/apt.sh sbx                    # keyring + sources + docker-sbx
 tailscale up                                    # browser login; enrollment
 ```
@@ -61,9 +63,9 @@ repository baseline at a recorded commit (never the daily checkout);
 holds one task's artifact directory (rw mount, created per task, see
 `fleet/defaults.txt`); `models` is unused while inference is remote —
 kept reserved. Exchange dirs must never be ancestors of clone roots.
-(2026-10-14: all dirs incl. `agent-exchange` created and owned by `nurbot`.)
+(2026-10-14: all dirs incl. `agent-exchange` created and owned by the fleet account.)
 
-## sbx lockdown (applied 2026-10-14, as nurbot)
+## sbx lockdown (applied 2026-10-14, as the fleet account)
 
 ```bash
 sbx login                                       # browser OAuth; GUI session exists
@@ -112,7 +114,7 @@ VM state incl. toolchain survives). Measured:
 | Verification chain green at baseline | `pnpm install --frozen-lockfile` → `lint` → `typecheck` → `build` → `test:unit` all pass inside the sandbox (unit scope; Postgres-backed integration + Playwright e2e deferred with their own future allow rules) |
 | Extraction path | sandbox commit `8f6da296` on a probe branch reached the host clone via `git fetch sandbox-task-001 <branch>`, authored with the declared identity; probe refs cleaned, host clone back at baseline |
 | Push must fail | `git push origin` from the sandbox: no credentials, connection refused at the SSH layer — designed boundary |
-| Host state invisible | host home (`/home/nurbot`) does not exist in the sandbox mount namespace; 0600 canary unreadable |
+| Host state invisible | host home (`/home/<fleet-account>`) does not exist in the sandbox mount namespace; 0600 canary unreadable |
 | Kit network override | **The `opencode` kit provisions an unremovable allow rule** (AI providers, GitHub, Ubuntu archives) on top of deny-all — `policy rm` refuses (`editable=false`, "recreated at sandbox create"), and it made `github.com` return 200 under "deny-all". Explicit `policy deny` rules **outrank** kit allows (measured: 401 → 403), so `fleet/envs/*.txt` carries a `deny` list neutralizing every provider/GitHub host; inference may only ever reach the gateway, GitHub only the Phase 6 broker |
 | Kit toolchain gap | kit ships Node 22 (`corepack` cannot symlink into `/usr/bin` as agent); repo engines `>=24` + `engine-strict=true` → Node 24 tarball fetched to `~/.local/node` at env setup (`nodejs.org` allow rule; **no `xz` in the kit** — must take the `.tar.gz` dist). Phase 5 template retires this rule |
 | pnpm store is filesystem-scoped | home (ext4) and clone (its own ext4 device) differ → pnpm silently fell back to a project-local `.pnpm-store/` **inside the clone**, which biome then linted (582 phantom errors). Fix in the profile's verify chain: `--store-dir ~/.pnpm-store` |
@@ -470,14 +472,14 @@ evidence — the first real task does that.
 - Enable host SSH only with a recovery connection already open (enabling it
   interrupts existing connections to the tailnet address):
   `sudo tailscale set --ssh`.
-- Laptop connects to `nurbot` with `ForwardAgent no`; never forward the
+- Laptop connects as the fleet account with `ForwardAgent no`; never forward the
   laptop's SSH agent into the fleet account.
 - Keep a second recovery route (local console) before touching SSH,
   firewall, kernel, or driver config.
 
 ## Reboot checklist (run after the first real reboot, then on maintenance)
 
-1. Remote login to `nurbot` works over the tailnet.
+1. Remote login as the fleet account works over the tailnet.
 2. `sbx daemon` state reachable; sandboxes recover or are explained.
 3. Disk above admission floor; `/srv` dirs intact.
 4. Tailscale reconnected (`tailscale status`).
