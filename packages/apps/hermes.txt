@@ -27,6 +27,16 @@
 #   excluded state, never declared. The installer's shell-rc PATH wiring is
 #   a no-op here: ~/.bashrc (chezmoi, home/dot_bashrc) and ~/.profile
 #   already export ~/.local/bin.
+#   Entry points: besides the module-managed ~/.local/bin/hermes, the
+#   tree's own command publication (source_completion) writes the sibling
+#   wrappers ~/.local/bin/hermes-agent and ~/.local/bin/hermes-acp — plain
+#   scripts with absolute paths into this version dir. They are build
+#   output, not module entry points: a version bump regenerates them, and
+#   drift.sh does not check them (the smoke test covers the main launcher).
+#   Side effect: the products build starts a gateway process (pid in
+#   ~/.hermes/gateway.pid). It is not a service — a reboot clears it;
+#   `hermes gateway install` (in the setup stage) is the supported way to
+#   supervise it, `hermes gateway stop` ends it.
 #   Tools: installed with the FULL ladder — hermes PM acquires node,
 #   agent-browser + Chromium and the computer-use driver inside the tree.
 #   These are Hermes's own tool runtimes, separate from the host
