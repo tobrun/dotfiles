@@ -1,0 +1,66 @@
+# Declaration for the per-user `hermes` CLI (Hermes Agent, Nous Research).
+# Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   Hermes Agent is not an archive app: its canonical install is a git
+#   checkout that builds its own environment in-tree (pinned uv + hash-
+#   verified Python deps via the checkout's uv.lock + PM-built tool runtimes),
+#   and its releases ship source only — no binaries, no checksum sidecars.
+#   So this is an install_cmd declaration: the module verifies `sha256` of
+#   the vendor installer script (the one behind
+#   `curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash`,
+#   fetched 2026-10-16 — a LOCAL RECOVERY ANCHOR in chrome.txt's sense: it
+#   detects substitution of the cached script since the anchor date) and
+#   hands it to the declared build command instead of extracting.
+#   Independence comes from the commit pin: install_cmd passes --commit, so
+#   the installed CODE is anchored on the git object hash of the release tag
+#   (d923a5eb... = tag v0.22.2 peeled, cross-checked against the GitHub
+#   release's target_commitish at declaration time). Releases ship on their
+#   own branch (refs/heads/release/<version>) cut off main, so install_cmd
+#   also passes --branch — the installer pins --commit as an ancestor of the
+#   branch it clones, and main does not contain the release line. The tree's own lockfiles pin every
+#   dependency (uv.lock is hash-verified at build; the installer stages its
+#   uv 0.12.3 with a built-in sha256 check).
+#   Layout: the checkout lives at ~/.local/apps/hermes/<version> (the
+#   installer's --dir), NOT the vendor-default ~/.hermes/hermes-agent.
+#   HERMES_HOME stays at the default ~/.hermes — config, sessions, logs:
+#   excluded state, never declared. The installer's shell-rc PATH wiring is
+#   a no-op here: ~/.bashrc (chezmoi, home/dot_bashrc) and ~/.profile
+#   already export ~/.local/bin.
+#   Tools: installed with the FULL ladder — hermes PM acquires node,
+#   agent-browser + Chromium and the computer-use driver inside the tree.
+#   These are Hermes's own tool runtimes, separate from the host
+#   agent-browser/chrome apps; PM records opt-outs, re-add with
+#   `hermes pm install <name>`.
+#   Updating: 1. fetch the current installer
+#              https://hermes-agent.nousresearch.com/install.sh
+#            2. resolve the new release commit and its branch:
+#              git ls-remote https://github.com/NousResearch/hermes-agent \
+#                'refs/tags/v<X.Y.Z>^{}' 'refs/heads/release/<X.Y.Z>'
+#              (the peeled tag and the release branch must agree on the sha;
+#              use the branch as --branch, the sha as --commit)
+#            3. place the new script in ~/.cache/workstation/apps/ (keep the
+#              old one as the rollback anchor), update version/archive/
+#              sha256 and the --commit sha in install_cmd here, rerun:
+#              bash modules/apps.sh hermes
+#   The module's provenance marker embeds install_cmd, so bumping the commit
+#   invalidates it and forces a rebuild. `hermes update` (the vendor
+#   self-updater) is NOT the supported path on this machine — it would drift
+#   the checkout off the declared commit; the module re-pins on the next
+#   converge.
+#
+#   History: initial install 0.22.2 (2026-10-16).
+
+name = hermes
+title = Hermes Agent
+version = 0.22.2
+binary = .hermes/bin/hermes
+archive = hermes-install-0.22.2.sh
+sha256 = 20f44240ebada354a468104a6a6724d037afcb8883d4d09ddeb4815622c52d8b
+source = https://hermes-agent.nousresearch.com/install.sh
+install_cmd = HERMES_HOME="$HOME/.hermes" bash "$ARCHIVE" --dir "$DEST" --branch release/0.22.2 --commit d923a5eb487a17c0a68801bba9ef0f56c81040a8 --non-interactive
+desktop = false
+
+# Functional check: the published launcher must report the declared version.
+smoke = true
+smoke_cmd = "$APP" --version | grep -q -- "$VERSION"
