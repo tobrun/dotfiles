@@ -1,0 +1,49 @@
+# Declaration for the per-user `tui-test` CLI (microsoft/tui-test: control,
+# record, inspect & test any TUI app / CLI — makes the terminal accessible to
+# AI agents). Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   Upstream publishes signed-CI GitHub Releases with per-platform tarballs.
+#   The 0.1.0 x86_64-linux-gnu digest was cross-checked 2026-10-16 against
+#   the sha256 digest GitHub itself publishes on the release asset API
+#   (api.github.com/repos/microsoft/tui-test/releases/latest) — an
+#   independent source, so `sha256` here is a true pin, not a local anchor.
+#   The tarball carries the bare `tui-test` binary at its root (prefix = .).
+#   The binary is a self-contained static-ish build (default backend is the
+#   in-process Alacritty emulator — no terminal emulator package needed);
+#   `ldd` in the module confirms no missing shared libraries at install.
+#   MP4 recording would need ffmpeg and is not part of this declaration.
+#   Skill: the upstream agent skill (repo-root SKILL.md, installed by
+#   `tui-test skill --add`) is vendored into the chezmoi tree
+#   (home/private_dot_config/opencode/skills/tui-test/) pinned to this
+#   release; the skill's command guidance matches the CLI this pin ships.
+#   Updating:
+#     1. read the release digest with the update recipe:
+#          gh release view <new-tag> --repo microsoft/tui-test
+#        (or the API above); note the api digest for
+#        tui-test-x86_64-unknown-linux-gnu.tar.gz;
+#     2. fetch into the app cache and compare sha256sum against that digest
+#        (keep the old tarball as the rollback anchor):
+#          curl -fsSL -o ~/.cache/workstation/apps/tui-test-<ver>-x86_64-unknown-linux-gnu.tar.gz \
+#            https://github.com/microsoft/tui-test/releases/download/<ver>/tui-test-x86_64-unknown-linux-gnu.tar.gz
+#     3. update version/archive/sha256/source here;
+#     4. rerun: bash modules/apps.sh tui-test
+#     5. if the upstream SKILL.md changed, re-sync the vendored skill file
+#        (compare against the 0.1.0 baseline) and chezmoi apply.
+#   History: initial install 0.1.0 (2026-10-16).
+
+name = tui-test
+title = tui-test
+version = 0.1.0
+binary = tui-test
+archive = tui-test-0.1.0-x86_64-unknown-linux-gnu.tar.gz
+sha256 = c7096f55a1cdb58c46bc4bdb27f8b5e246f07a5324a904c5ccd1b0351df0466b
+source = https://github.com/microsoft/tui-test/releases/download/0.1.0/tui-test-x86_64-unknown-linux-gnu.tar.gz
+prefix = .
+desktop = false
+
+# Functional evidence: the launcher reports the declared version, the agent
+# guide command renders (proves the embedded skill schema ships with the
+# binary), and no daemon/session is left behind by the smoke test itself.
+smoke = true
+smoke_cmd = v=$("$APP" --version) && [ "$v" = "tui-test $VERSION" ] && "$APP" usage >/dev/null
