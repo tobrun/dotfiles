@@ -107,6 +107,11 @@ ALLOW['email-address']='git@github\.com|@(example\.[a-z]{2,4}|noreply\.[A-Za-z0-
 # the nvidia runbook's rebuild steps keep their self-checkout reference
 # (reviewed 2026-10-15: it names this repo, no project).
 EXCL['project-checkout']='^(AGENTS|README)\.md$|^docs/runbooks/nvidia-gpu\.md$'
+# The exdraw app declaration pins its upstream tarball by URL; the operator
+# account name there is published information of the pinned source itself
+# (MIT, public), and the declaration is the install mechanism, not a
+# disclosure (reviewed 2026-10-16).
+ALLOW['operator-name']='clI_excalidraw'
 # Vendor keyring headers must record the publisher UID (AGENTS.md vendor-repo
 # recipe); those addresses belong to the vendor, not the operator.
 # The fleet git identity in fleet/defaults.txt is a DECLARATION (file header:

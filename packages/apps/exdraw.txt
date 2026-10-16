@@ -1,0 +1,56 @@
+# Declaration for the per-user `exdraw` CLI (live Excalidraw canvas from the
+# shell). Parsed by modules/apps.sh: `key = value`, one per line.
+#
+# Provenance policy:
+#   exdraw ships no published artifact (verified 2026-10-16: absent from the
+#   npm registry; the upstream repo has no releases). Its canonical shape is
+#   a source tree built with `npm ci && tsc`, so this is an install_cmd
+#   declaration (hermes.txt's kind): the artifact is the GitHub source
+#   tarball of one pinned commit, and `sha256` is a LOCAL RECOVERY ANCHOR in
+#   chrome.txt's sense — it detects substitution of the cached tarball since
+#   the anchor date. Independence comes from the commit pin in `source`:
+#   re-fetching the same commit re-verifies the declaration against the git
+#   object hash. The `vendor/` submodules are gitlinks used by the bench
+#   only — absent from tarballs and not needed by the build (measured
+#   2026-10-16: tarball builds green; start→add→status→stop loop green on a
+#   scratch port, unreachable path exits 3).
+#   Build: npm ci installs the dev deps (TypeScript) needed for the tsc
+#   build; `npm prune --omit=dev` then leaves only the runtime tree
+#   (mcp-excalidraw-server) in the install. The launcher is the compiled
+#   dist/src/bin.js (shebang `#!/usr/bin/env node`; node resolves through
+#   the mise shims — the canonical toolchain layer, so exdraw follows
+#   toolchains/mise.toml bumps).
+#   Skill: the upstream agent skill is vendored into the chezmoi tree
+#   (home/private_dot_config/opencode/skills/exdraw/) and synced to this
+#   commit; its single deviation from upstream is the run instruction
+#   (installed launcher instead of `npx -y exdraw`, which cannot work —
+#   the package is not on npm).
+#   Updating:
+#     1. pick the new upstream commit sha (main HEAD or a chosen commit);
+#     2. fetch the tarball into the app cache:
+#          curl -fsSL -o ~/.cache/workstation/apps/exdraw-<ver>-<sha>.tar.gz
+#            https://github.com/tobrun/clI_excalidraw/archive/<sha>.tar.gz
+#        (keep the old tarball as the rollback anchor);
+#     3. update version/archive/sha256/source here — version follows
+#        package.json; on a same-version commit bump the install dir is
+#        rebuilt because the provenance marker embeds the sha256;
+#     4. rerun: bash modules/apps.sh exdraw
+#     5. if upstream skill/ changed, re-sync the chezmoi skill file and
+#        re-apply.
+#   History: initial install 0.1.0 @ 4989af36912e (2026-10-16).
+
+name = exdraw
+title = exdraw
+version = 0.1.0
+binary = dist/src/bin.js
+archive = exdraw-0.1.0-4989af3.tar.gz
+sha256 = b63061ff3f4b6db07d4b65bf5f8dfb7fd7bf9143af51d99e234647d6b8237311
+source = https://github.com/tobrun/clI_excalidraw/archive/4989af36912e0db5345acf205d28b915a17a107f.tar.gz
+install_cmd = d=$(mktemp -d) && tar -xzf "$ARCHIVE" -C "$d" && cd "$d"/cli_excalidraw-* && npm ci && npm run build && npm prune --omit=dev && mv "$PWD" "$DEST"
+desktop = false
+
+# Functional evidence: the launcher reports the declared version, and the
+# canvas-unreachable path returns upstream's documented exit code 3 — with
+# autostart disabled, so the smoke test never leaves a server behind.
+smoke = true
+smoke_cmd = v=$("$APP" --version) && [ "$v" = "$VERSION" ] && { EXDRAW_NO_AUTOSTART=1 EXDRAW_URL=http://127.0.0.1:3999 "$APP" status >/dev/null 2>&1; [ $? -eq 3 ]; }
