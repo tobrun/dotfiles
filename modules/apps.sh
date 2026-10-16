@@ -4,6 +4,14 @@
 # Model:
 #   Declaration   packages/apps/<app>.txt      (in Git: version, sha256, source)
 #   Artifact      ~/.cache/workstation/apps/   (private cache, not in Git)
+#   install_cmd   optional declaration key: the verified artifact is an INPUT,
+#                 not a payload — instead of extracting, the module runs the
+#                 declared command (env ARCHIVE/DEST/VERSION) to build $DEST
+#                 from it. For apps whose shape is a self-building tree
+#                 (e.g. hermes: vendor installer pinned to a commit). The
+#                 provenance marker records the command too, so editing it
+#                 forces a rebuild; its success is the functional evidence
+#                 that closes the loop together with the smoke test.
 #   Install       ~/.local/apps/<app>/<version> + `current` symlink
 #   Entry points  ~/.local/bin/<app>, ~/.local/share/applications/<app>.desktop
 #
@@ -47,7 +55,10 @@ install_app() {
     f[$key]=$value
   done < "$decl"
 
-  local required=(name title version binary prefix archive sha256 source)
+  local required=(name title version binary archive sha256 source)
+  # prefix names the archive's top-level dir; an install_cmd build has no
+  # extraction, so it needs no prefix.
+  [[ -n "${f[install_cmd]:-}" ]] || required+=(prefix)
   for key in "${required[@]}"; do
     [[ -n "${f[$key]:-}" ]] || fail "app '$app' declaration missing key: $key"
   done
@@ -63,6 +74,9 @@ install_app() {
   local app_dir="$apps_root/$app"
   local dest="$app_dir/${f[version]}"
   local provenance="sha256=${f[sha256]}"
+  # An install_cmd build is pinned by its command text too: editing the
+  # command (e.g. moving the commit pin) must invalidate the marker.
+  [[ -z "${f[install_cmd]:-}" ]] || provenance+=" install_cmd=${f[install_cmd]}"
 
   # Convergence: matching provenance means the artifact was already verified
   # and installed; repair entry points and stop.
@@ -106,24 +120,36 @@ install_app() {
   actual   $actual
   Refusing to install."
 
-    note "$app ${f[version]}: extracting"
     mkdir -p -- "$app_dir"
     rm -rf -- "$dest"
-    local tmp
-    tmp=$(mktemp -d -- "$app_dir/.tmp.XXXXXX")
-    case "${f[archive]}" in
-      *.zip) unzip -q -- "$archive" -d "$tmp" ;;
-      *.tar.gz | *.tgz) tar -xzf "$archive" -C "$tmp" ;;
-      *) fail "app '$app': unsupported archive type: ${f[archive]}" ;;
-    esac
-    if [[ "${f[prefix]}" == "." ]]; then
-      # Payload at the archive root (e.g. VSCodium tarballs): tmp itself is
-      # the install tree, and it lives in $app_dir, so rename it into place.
-      mv -- "$tmp" "$dest"
+    if [[ -n "${f[install_cmd]:-}" ]]; then
+      # install_cmd kind: the verified artifact is the input, the declared
+      # command owns the build of $DEST. Its stdout/stderr flow through —
+      # like the smoke test, the command's own exit status is the evidence.
+      note "$app ${f[version]}: building via declared install_cmd"
+      ARCHIVE="$archive" DEST="$dest" VERSION="${f[version]}" \
+        bash -c "${f[install_cmd]}" \
+        || fail "app '$app': install_cmd failed (see output above)"
+      [[ -e "$dest/${f[binary]}" ]] ||
+        fail "app '$app': install_cmd succeeded but produced no $dest/${f[binary]}"
     else
-      [[ -d "$tmp/${f[prefix]}" ]] || fail "app '$app': archive has no top-level '${f[prefix]}/'"
-      mv -- "$tmp/${f[prefix]}" "$dest"
-      rmdir -- "$tmp" 2>/dev/null || rm -rf -- "$tmp"
+      note "$app ${f[version]}: extracting"
+      local tmp
+      tmp=$(mktemp -d -- "$app_dir/.tmp.XXXXXX")
+      case "${f[archive]}" in
+        *.zip) unzip -q -- "$archive" -d "$tmp" ;;
+        *.tar.gz | *.tgz) tar -xzf "$archive" -C "$tmp" ;;
+        *) fail "app '$app': unsupported archive type: ${f[archive]}" ;;
+      esac
+      if [[ "${f[prefix]}" == "." ]]; then
+        # Payload at the archive root (e.g. VSCodium tarballs): tmp itself is
+        # the install tree, and it lives in $app_dir, so rename it into place.
+        mv -- "$tmp" "$dest"
+      else
+        [[ -d "$tmp/${f[prefix]}" ]] || fail "app '$app': archive has no top-level '${f[prefix]}/'"
+        mv -- "$tmp/${f[prefix]}" "$dest"
+        rmdir -- "$tmp" 2>/dev/null || rm -rf -- "$tmp"
+      fi
     fi
     [[ -x "$dest/${f[binary]}" ]] || chmod +x -- "$dest/${f[binary]}"
     printf '%s\n' "$provenance" > "$dest/.provenance"
